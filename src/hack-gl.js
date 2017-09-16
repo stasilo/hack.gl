@@ -2,7 +2,7 @@ import webGlUtils from './lib/webgl-utils';
 import initPixelToy from './gl/init-pixel-toy';
 import validateOptions from './init/options';
 
-require('babel-polyfill');
+// require('babel-polyfill');
 
 export default function hackGl(options) {
     options = validateOptions(options);

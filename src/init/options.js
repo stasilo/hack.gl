@@ -1,3 +1,5 @@
+// wow, yeah, this needs work - the boring part
+
 export default function validateOptions(options) {
     let validatedOptions = {
         isValid: true,
@@ -21,9 +23,9 @@ export default function validateOptions(options) {
             height: window.innerHeight
         }
     }
-    
+
     if(typeof options.feedbackFbo !== 'undefined') {
-        if(options.feedbackFbo && typeof options.feedbackFbo.resolution === 'undefined' ||
+        if(typeof options.feedbackFbo.resolution === 'undefined' ||
             (!options.feedbackFbo.resolution.width || !options.feedbackFbo.resolution.height))
         {
             validatedOptions.feedbackFbo.resolution = validatedOptions.resolution;

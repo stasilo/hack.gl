@@ -2,7 +2,7 @@
   "name": "hack.gl",
   "version": "0.1.11",
   "description": "",
-  "main": "dist/bundle.js",
+  "main": "dist/hackgl.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
