@@ -1,6 +1,6 @@
 {
   "name": "hack.gl",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "",
   "main": "dist/hackgl.js",
   "scripts": {
