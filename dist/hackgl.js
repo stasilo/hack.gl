@@ -29,7 +29,6 @@ define(String.prototype, "padRight", "".padEnd);
   [][key] && define(Array, key, Function.call.bind([][key]));
 });
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-
 },{"core-js/fn/regexp/escape":14,"core-js/shim":420,"regenerator-runtime/runtime":2}],2:[function(_dereq_,module,exports){
 (function (global){
 /**
@@ -770,7 +769,6 @@ define(String.prototype, "padRight", "".padEnd);
 );
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-
 },{}],3:[function(_dereq_,module,exports){
 module.exports = { "default": _dereq_("core-js/library/fn/array/from"), __esModule: true };
 },{"core-js/library/fn/array/from":15}],4:[function(_dereq_,module,exports){
@@ -9161,43 +9159,51 @@ exports.default = function () {
 
                         uniformData.u_resolution.value = [options.resolution.width, options.resolution.height];
 
-                        if (options.injectWebcamUniform) {
-                            uniformData.u_camera = (0, _initCamera.initCameraUniform)(options);
-                        }
-
-                        fbo = null;
-
-                        if (!options.feedbackFbo) {
-                            _context.next = 10;
+                        if (!options.injectWebcamUniform) {
+                            _context.next = 7;
                             break;
                         }
 
-                        _context.next = 8;
+                        _context.next = 6;
+                        return (0, _initCamera.initCameraUniform)(options);
+
+                    case 6:
+                        uniformData.u_camera = _context.sent;
+
+                    case 7:
+                        fbo = null;
+
+                        if (!options.feedbackFbo) {
+                            _context.next = 13;
+                            break;
+                        }
+
+                        _context.next = 11;
                         return (0, _initFbo.initFramebuffer)(gl, options);
 
-                    case 8:
+                    case 11:
                         fbo = _context.sent;
 
                         uniformData.u_fbo = fbo.fboUniform;
 
-                    case 10:
+                    case 13:
                         program = (0, _createGlProgram2.default)(gl, toyVertexShader, fragmentShader);
 
                         if (program) {
-                            _context.next = 13;
+                            _context.next = 16;
                             break;
                         }
 
                         throw 'hack.Gl: failed to create main gl program!';
 
-                    case 13:
+                    case 16:
 
                         gl.useProgram(program);
                         vertexCount = (0, _initVertexBuffers2.default)(gl, program, options);
-                        _context.next = 17;
+                        _context.next = 20;
                         return (0, _uniformUtils.initUniforms)(gl, program, uniformData);
 
-                    case 17:
+                    case 20:
                         uniforms = _context.sent;
 
                         _renderFragmentShader = function _renderFragmentShader() {
@@ -9225,7 +9231,7 @@ exports.default = function () {
 
                         _render();
 
-                    case 21:
+                    case 24:
                     case 'end':
                         return _context.stop();
                 }
@@ -9437,19 +9443,15 @@ var initUniforms = exports.initUniforms = function () {
                 switch (_context.prev = _context.next) {
                     case 0:
                         result = {};
-
-
-                        console.dir(uniformData);
-
                         _iteratorNormalCompletion = true;
                         _didIteratorError = false;
                         _iteratorError = undefined;
-                        _context.prev = 5;
+                        _context.prev = 4;
                         _iterator = (0, _getIterator3.default)((0, _iterateObject2.default)(uniformData));
 
-                    case 7:
+                    case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 21;
+                            _context.next = 20;
                             break;
                         }
 
@@ -9457,79 +9459,76 @@ var initUniforms = exports.initUniforms = function () {
                         uniform = gl.getUniformLocation(program, new String(uniformName));
 
                         if (uniform) {
-                            _context.next = 13;
+                            _context.next = 12;
                             break;
                         }
 
                         console.warn('hackGl: ' + (fbo ? 'frame buffer shader:' : 'fragment shader:') + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
-                        return _context.abrupt('continue', 18);
+                        return _context.abrupt('continue', 17);
 
-                    case 13:
+                    case 12:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
                         // await needed for texture image data loading
 
-                        _context.next = 16;
+                        _context.next = 15;
                         return setUniformValue(gl, updatedData);
 
-                    case 16:
+                    case 15:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 18:
+                    case 17:
                         _iteratorNormalCompletion = true;
-                        _context.next = 7;
+                        _context.next = 6;
                         break;
 
-                    case 21:
-                        _context.next = 27;
+                    case 20:
+                        _context.next = 26;
                         break;
 
-                    case 23:
-                        _context.prev = 23;
-                        _context.t0 = _context['catch'](5);
+                    case 22:
+                        _context.prev = 22;
+                        _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 27:
+                    case 26:
+                        _context.prev = 26;
                         _context.prev = 27;
-                        _context.prev = 28;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 30:
-                        _context.prev = 30;
+                    case 29:
+                        _context.prev = 29;
 
                         if (!_didIteratorError) {
-                            _context.next = 33;
+                            _context.next = 32;
                             break;
                         }
 
                         throw _iteratorError;
 
+                    case 32:
+                        return _context.finish(29);
+
                     case 33:
-                        return _context.finish(30);
+                        return _context.finish(26);
 
                     case 34:
-                        return _context.finish(27);
-
-                    case 35:
-
-                        console.dir(result);
-
                         return _context.abrupt('return', result);
 
-                    case 37:
+                    case 35:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[5, 23, 27, 35], [28,, 30, 34]]);
+        }, _callee, this, [[4, 22, 26, 34], [27,, 29, 33]]);
     }));
 
     return function initUniforms(_x, _x2, _x3) {
@@ -10321,5 +10320,3 @@ function _injectVideoElement() {
 
 },{"babel-runtime/core-js/promise":8,"babel-runtime/helpers/asyncToGenerator":9,"babel-runtime/helpers/extends":10,"babel-runtime/regenerator":13}]},{},[430])(430)
 });
-
-//# sourceMappingURL=hackgl.js.map

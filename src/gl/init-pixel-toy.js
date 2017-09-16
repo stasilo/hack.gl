@@ -27,7 +27,7 @@ export default async function initPixelToy(gl, options) {
     uniformData.u_resolution.value = [options.resolution.width, options.resolution.height];
 
     if(options.injectWebcamUniform) {
-        uniformData.u_camera = initCameraUniform(options);
+        uniformData.u_camera = await initCameraUniform(options);
     }
 
     let fbo = null;
