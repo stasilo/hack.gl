@@ -3436,7 +3436,7 @@ function validateOptions(options) {
         };
     }
 
-    if (typeof options.feedbackFbo.resolution === 'undefined' || !options.feedbackFbo.resolution.width || !options.feedbackFbo.resolution.height) {
+    if (typeof options.feedbackFbo !== 'undefined' && typeof options.feedbackFbo.resolution === 'undefined' || !options.feedbackFbo.resolution.width || !options.feedbackFbo.resolution.height) {
         validatedOptions.feedbackFbo.resolution = validatedOptions.resolution;
     }
 
@@ -3982,3 +3982,5 @@ function _injectVideoElement() {
 
 },{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}]},{},[105])(105)
 });
+
+//# sourceMappingURL=hackgl.js.map
