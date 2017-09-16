@@ -67,6 +67,4 @@ export default async function initPixelToy(gl, options) {
     }
 
     _render();
-
-    // requestAnimationFrame(_render);
 }

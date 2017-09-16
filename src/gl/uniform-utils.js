@@ -4,6 +4,8 @@ import iterateObject from '../utils/iterate-object';
 export async function initUniforms(gl, program, uniformData, fbo = false) {
     let result = {};
 
+    console.dir(uniformData);
+    
     for (let [uniformName, data] of iterateObject(uniformData)) {
         let uniform = gl.getUniformLocation(program, new String(uniformName));
         if (!uniform) {
@@ -22,6 +24,8 @@ export async function initUniforms(gl, program, uniformData, fbo = false) {
         updatedData = await setUniformValue(gl, updatedData);
         result[uniformName] = updatedData;
     }
+
+    console.dir(result);
 
     return result;
 }

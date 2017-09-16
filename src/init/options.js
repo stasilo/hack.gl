@@ -21,11 +21,13 @@ export default function validateOptions(options) {
             height: window.innerHeight
         }
     }
-
-    if(typeof options.feedbackFbo !== 'undefined' && typeof options.feedbackFbo.resolution === 'undefined' ||
-        !options.feedbackFbo.resolution.width || !options.feedbackFbo.resolution.height)
-    {
-        validatedOptions.feedbackFbo.resolution = validatedOptions.resolution;
+    
+    if(typeof options.feedbackFbo !== 'undefined') {
+        if(options.feedbackFbo && typeof options.feedbackFbo.resolution === 'undefined' ||
+            (!options.feedbackFbo.resolution.width || !options.feedbackFbo.resolution.height))
+        {
+            validatedOptions.feedbackFbo.resolution = validatedOptions.resolution;
+        }
     }
 
     if(typeof options.uniforms === 'undefined') {
