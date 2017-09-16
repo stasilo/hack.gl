@@ -3982,5 +3982,3 @@ function _injectVideoElement() {
 
 },{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}]},{},[105])(105)
 });
-
-//# sourceMappingURL=hackgl.js.map

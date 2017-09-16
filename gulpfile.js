@@ -50,7 +50,7 @@ function transpileAndBundleJs(watch) {
             .pipe(source(options.jsBundleName + '.js'))
             .pipe(buffer())
             .pipe(options.isProduction ? noop() : sourcemaps.init({ loadMaps: true }))
-            .pipe(options.isProduction ? uglify() : noop())
+            //.pipe(options.isProduction ? uglify() : noop())
             .on('error', function (err) { console.error(err); this.emit('end'); })
             .pipe(options.isProduction ? noop() : sourcemaps.write('./'))
             .pipe(derequire())
