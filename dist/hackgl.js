@@ -29,6 +29,7 @@ define(String.prototype, "padRight", "".padEnd);
   [][key] && define(Array, key, Function.call.bind([][key]));
 });
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{"core-js/fn/regexp/escape":14,"core-js/shim":420,"regenerator-runtime/runtime":2}],2:[function(_dereq_,module,exports){
 (function (global){
 /**
@@ -769,6 +770,7 @@ define(String.prototype, "padRight", "".padEnd);
 );
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
 },{}],3:[function(_dereq_,module,exports){
 module.exports = { "default": _dereq_("core-js/library/fn/array/from"), __esModule: true };
 },{"core-js/library/fn/array/from":15}],4:[function(_dereq_,module,exports){
@@ -10320,3 +10322,5 @@ function _injectVideoElement() {
 
 },{"babel-runtime/core-js/promise":8,"babel-runtime/helpers/asyncToGenerator":9,"babel-runtime/helpers/extends":10,"babel-runtime/regenerator":13}]},{},[430])(430)
 });
+
+//# sourceMappingURL=hackgl.js.map
