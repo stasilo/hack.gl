@@ -15,7 +15,6 @@ let canvas = document.getElementById('gl-canvas');
 
 hackgl({
     canvas,
-    clearColor: [0.0, 0.0, 0.0, 1.0],
     resolution: {
         width: 800,
         height: 400
