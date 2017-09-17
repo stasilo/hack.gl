@@ -13,8 +13,7 @@ export default function validateOptions(options) {
     }
 
     if(typeof options.clearColor === 'undefined' || !options.clearColor) {
-        validatedOptions.isValid = false;
-        validatedOptions.errors = "\nNo clear color supplied when calling hackGl()";
+        validatedOptions.clearColor = [0.0, 0.0, 0.0, 1.0];
     }
 
     if(typeof options.resolution === 'undefined' || !options.resolution.width || !options.resolution.height) {
