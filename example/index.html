@@ -54,8 +54,6 @@
                 `
             },
             fragmentShader: `
-                uniform sampler2D u_texture1;
-
                 void main() {
                     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
                     gl_FragColor = texture2D(u_fbo, uv);
