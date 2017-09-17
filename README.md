@@ -1,5 +1,5 @@
 
-`simple fragment shader / feedback effect declarative webgl boiler`
+`simple fragment shader / feedback effect declarative webgl helper`
 
 `useful for "pixel toys" (as on shadertoy.com), raymarchers, etc.`
 
