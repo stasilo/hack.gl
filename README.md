@@ -8,6 +8,10 @@
 
 `type this:`
 
+`$ npm install --save-dev hack.gl`
+
+`then this:`
+
 ```javascript
 const hackgl = require('hack.gl');
 // or: import hackgl from 'hack.gl';
