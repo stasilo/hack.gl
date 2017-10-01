@@ -30,13 +30,14 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
 
     // set params
 
-    // note: clamp removes need for w x h being a power of two
+    let repeatTypeS, repeatTypeT;
     if(_imageDimensionArePowerOf2(image)) {
-        let repeatTypeS = gl.TEXTURE_WRAP_S;
-        let repeatTypeT = gl.TEXTURE_WRAP_T;
+        repeatTypeS = gl.TEXTURE_WRAP_S;
+        repeatTypeT = gl.TEXTURE_WRAP_T;
     } else {
-        let repeatTypeS = gl.CLAMP_TO_EDGE;
-        let repeatTypeT = gl.CLAMP_TO_EDGE;
+        // note: clamp removes need for w x h being a power of two
+        repeatTypeS = gl.CLAMP_TO_EDGE;
+        repeatTypeT = gl.CLAMP_TO_EDGE;
     }
 
     if(data.wrapS && data.wrapS == 'repeat') {
