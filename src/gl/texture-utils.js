@@ -39,26 +39,29 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
         let repeatTypeT = gl.CLAMP_TO_EDGE;
     }
 
-    if(data.wrap_s && data.wrap_s == 'repeat') {
+    if(data.wrapS && data.wrapS == 'repeat') {
         repeatTypeS = gl.TEXTURE_WRAP_S;
     }
 
-    if(data.wrap_t && data.wrap_t == 'repeat') {
-        repeatTypeT = gl.TEXTURE_WRAP_S;
+    if(data.wrapT && data.wrapT == 'repeat') {
+        repeatTypeT = gl.TEXTURE_WRAP_T;
     }
 
-    if(data.wrap_s && data.wrap_s == 'mirrored-repeat') {
+    if(data.wrapS && data.wrapS == 'mirrored-repeat') {
         repeatTypeS = gl.MIRRORED_REPEAT;
     }
 
-    if(data.wrap_t && data.wrap_t == 'mirrored-repeat') {
+    if(data.wrapT && data.wrapT == 'mirrored-repeat') {
         repeatTypeT = gl.MIRRORED_REPEAT;
     }
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapS, repeatTypeS);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapT, repeatTypeT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+    if(data.generateMips) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+    }
 
     // set the texture image
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
