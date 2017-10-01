@@ -18,7 +18,7 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
     let texture = gl.createTexture();
 
     // flip axes to xy instead of yx
-    if(data.flipY && data.flipY != false) {
+    if(typeof data.flipY === 'undefined' || data.flipY != false) {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     }
 
