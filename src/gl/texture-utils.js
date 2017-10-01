@@ -18,7 +18,9 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
     let texture = gl.createTexture();
 
     // flip axes to xy instead of yx
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+    if(data.flipY && data.flipY != false) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+    }
 
     // activate texture
     gl.activeTexture(gl[`TEXTURE${textureUnitNo + unitNoOffset}`]);
@@ -38,11 +40,11 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
     }
 
     if(data.wrap_s && data.wrap_s == 'repeat') {
-        repeatTypeS = gl.MIRRORED_REPEAT;
+        repeatTypeS = gl.TEXTURE_WRAP_S;
     }
 
     if(data.wrap_t && data.wrap_t == 'repeat') {
-        repeatTypeT = gl.MIRRORED_REPEAT;
+        repeatTypeT = gl.TEXTURE_WRAP_S;
     }
 
     if(data.wrap_s && data.wrap_s == 'mirrored-repeat') {
