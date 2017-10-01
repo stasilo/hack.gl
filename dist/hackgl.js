@@ -2891,7 +2891,7 @@ exports.default = function () {
 
 
                         _render = function _render() {
-                            if (options.feedbackFbo) {
+                            if (options.feedbackFbo && uniforms.u_fbo) {
                                 fbo.renderToTexture();
                             }
 
@@ -2959,22 +2959,22 @@ function initVertexBuffers(gl, program, options) {
 module.exports = exports['default'];
 
 },{}],103:[function(_dereq_,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.loadTextureData = undefined;
 
-var _regenerator = _dereq_("babel-runtime/regenerator");
+var _regenerator = _dereq_('babel-runtime/regenerator');
 
 var _regenerator2 = _interopRequireDefault(_regenerator);
 
-var _promise = _dereq_("babel-runtime/core-js/promise");
+var _promise = _dereq_('babel-runtime/core-js/promise');
 
 var _promise2 = _interopRequireDefault(_promise);
 
-var _asyncToGenerator2 = _dereq_("babel-runtime/helpers/asyncToGenerator");
+var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
 
 var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
@@ -2984,7 +2984,7 @@ var loadTextureData = exports.loadTextureData = function () {
             while (1) {
                 switch (_context.prev = _context.next) {
                     case 0:
-                        return _context.abrupt("return", new _promise2.default(function (resolve, reject) {
+                        return _context.abrupt('return', new _promise2.default(function (resolve, reject) {
                             var image = new Image();
                             image.onload = function () {
                                 return resolve(image);
@@ -2996,7 +2996,7 @@ var loadTextureData = exports.loadTextureData = function () {
                         }));
 
                     case 1:
-                    case "end":
+                    case 'end':
                         return _context.stop();
                 }
             }
@@ -3022,7 +3022,7 @@ function initTexture(gl, data, image) {
 
     var maxTextureCount = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
     if (textureUnitNo > maxTextureCount) {
-        throw "hackGl: max number of texture units (" + maxTextureCount + ") exceeded";
+        throw 'hackGl: max number of texture units (' + maxTextureCount + ') exceeded';
     }
 
     var texture = gl.createTexture();
@@ -3031,7 +3031,7 @@ function initTexture(gl, data, image) {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
 
     // activate texture
-    gl.activeTexture(gl["TEXTURE" + (textureUnitNo + unitNoOffset)]);
+    gl.activeTexture(gl['TEXTURE' + (textureUnitNo + unitNoOffset)]);
 
     // bind texture object
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -3039,6 +3039,30 @@ function initTexture(gl, data, image) {
     // set params
 
     // note: clamp removes need for w x h being a power of two
+    if (_imageDimensionArePowerOf2(image)) {
+        var _repeatTypeS = gl.TEXTURE_WRAP_S;
+        var _repeatTypeT = gl.TEXTURE_WRAP_T;
+    } else {
+        var _repeatTypeS2 = gl.CLAMP_TO_EDGE;
+        var _repeatTypeT2 = gl.CLAMP_TO_EDGE;
+    }
+
+    if (data.wrap_s && data.wrap_s == 'repeat') {
+        repeatTypeS = gl.MIRRORED_REPEAT;
+    }
+
+    if (data.wrap_t && data.wrap_t == 'repeat') {
+        repeatTypeT = gl.MIRRORED_REPEAT;
+    }
+
+    if (data.wrap_s && data.wrap_s == 'mirrored-repeat') {
+        repeatTypeS = gl.MIRRORED_REPEAT;
+    }
+
+    if (data.wrap_t && data.wrap_t == 'mirrored-repeat') {
+        repeatTypeT = gl.MIRRORED_REPEAT;
+    }
+
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
@@ -3056,7 +3080,7 @@ function initTexture(gl, data, image) {
 }
 
 function initFboTexture(gl, data) {
-    gl.activeTexture(gl["TEXTURE" + textureUnitNo]);
+    gl.activeTexture(gl['TEXTURE' + textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
     gl.uniform1i(data.uniform, textureUnitNo);
     data.textureUnitNo = textureUnitNo;
@@ -3066,7 +3090,7 @@ function initFboTexture(gl, data) {
 }
 
 function bindFboTextureToFragmentShader(gl, uniforms) {
-    gl.activeTexture(gl["TEXTURE" + uniforms.u_fbo.textureUnitNo]);
+    gl.activeTexture(gl['TEXTURE' + uniforms.u_fbo.textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, uniforms.u_fbo.texture2);
     gl.uniform1i(uniforms.u_fbo.uniform, uniforms.u_fbo.textureUnitNo);
 }
@@ -3074,6 +3098,10 @@ function bindFboTextureToFragmentShader(gl, uniforms) {
 function updateTexture(gl, data) {
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
+}
+
+function _imageDimensionArePowerOf2(image) {
+    return (image.naturalWidth & image.naturalWidth - 1) == 0 && (image.naturalHeight & image.naturalHeight - 1) == 0;
 }
 
 },{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/regenerator":11}],104:[function(_dereq_,module,exports){
@@ -3217,7 +3245,7 @@ var setUniformValue = exports.setUniformValue = function () {
                 switch (_context2.prev = _context2.next) {
                     case 0:
                         _context2.t0 = data.type;
-                        _context2.next = _context2.t0 === 't' ? 3 : _context2.t0 === 'fbo_t' ? 17 : _context2.t0 === 'f' ? 19 : _context2.t0 === '2fv' ? 21 : 23;
+                        _context2.next = _context2.t0 === 't' ? 3 : _context2.t0 === 'fbo_t' ? 17 : _context2.t0 === 'f' ? 19 : _context2.t0 === '2fv' ? 21 : _context2.t0 === '3fv' ? 23 : _context2.t0 === '4fv' ? 25 : 27;
                         break;
 
                     case 3:
@@ -3255,30 +3283,38 @@ var setUniformValue = exports.setUniformValue = function () {
                         }
 
                     case 16:
-                        return _context2.abrupt('break', 25);
+                        return _context2.abrupt('break', 29);
 
                     case 17:
                         if (!updating) {
                             data = (0, _textureUtils.initFboTexture)(gl, data);
                         }
 
-                        return _context2.abrupt('break', 25);
+                        return _context2.abrupt('break', 29);
 
                     case 19:
                         gl.uniform1f(data.uniform, data.value);
-                        return _context2.abrupt('break', 25);
+                        return _context2.abrupt('break', 29);
 
                     case 21:
                         gl.uniform2fv(data.uniform, data.value);
-                        return _context2.abrupt('break', 25);
+                        return _context2.abrupt('break', 29);
 
                     case 23:
-                        throw ': ' + data.type + ' uniform not yet implemented!';
+                        gl.uniform3fv(data.uniform, data.value);
+                        return _context2.abrupt('break', 29);
 
                     case 25:
+                        gl.uniform4fv(data.uniform, data.value);
+                        return _context2.abrupt('break', 29);
+
+                    case 27:
+                        throw ': ' + data.type + ' uniform not yet implemented!';
+
+                    case 29:
                         return _context2.abrupt('return', data);
 
-                    case 26:
+                    case 30:
                     case 'end':
                         return _context2.stop();
                 }

@@ -56,7 +56,7 @@ export default async function initPixelToy(gl, options) {
 
     // main render loop
     let _render = () => {
-        if(options.feedbackFbo) {
+        if(options.feedbackFbo && uniforms.u_fbo) {
             fbo.renderToTexture();
         }
 

@@ -74,6 +74,16 @@ export async function setUniformValue(gl, data, updating = false) {
             gl.uniform2fv(data.uniform, data.value);
             break;
 
+        // vec3
+        case '3fv':
+            gl.uniform3fv(data.uniform, data.value);
+            break;
+
+        // vec4
+        case '4fv':
+            gl.uniform4fv(data.uniform, data.value);
+            break;
+
         default:
             throw `: ${data.type} uniform not yet implemented!`;
             break;

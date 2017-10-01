@@ -29,6 +29,30 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
     // set params
 
     // note: clamp removes need for w x h being a power of two
+    if(_imageDimensionArePowerOf2(image)) {
+        let repeatTypeS = gl.TEXTURE_WRAP_S;
+        let repeatTypeT = gl.TEXTURE_WRAP_T;
+    } else {
+        let repeatTypeS = gl.CLAMP_TO_EDGE;
+        let repeatTypeT = gl.CLAMP_TO_EDGE;
+    }
+
+    if(data.wrap_s && data.wrap_s == 'repeat') {
+        repeatTypeS = gl.MIRRORED_REPEAT;
+    }
+
+    if(data.wrap_t && data.wrap_t == 'repeat') {
+        repeatTypeT = gl.MIRRORED_REPEAT;
+    }
+
+    if(data.wrap_s && data.wrap_s == 'mirrored-repeat') {
+        repeatTypeS = gl.MIRRORED_REPEAT;
+    }
+
+    if(data.wrap_t && data.wrap_t == 'mirrored-repeat') {
+        repeatTypeT = gl.MIRRORED_REPEAT;
+    }
+
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
@@ -64,4 +88,8 @@ export function bindFboTextureToFragmentShader(gl, uniforms) {
 export function updateTexture(gl, data) {
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
+}
+
+function _imageDimensionArePowerOf2(image) {
+  return (image.naturalWidth & (image.naturalWidth - 1)) == 0 && (image.naturalHeight & (image.naturalHeight - 1)) == 0;
 }
