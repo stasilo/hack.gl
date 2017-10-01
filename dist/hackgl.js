@@ -3040,13 +3040,15 @@ function initTexture(gl, data, image) {
 
     // set params
 
-    // note: clamp removes need for w x h being a power of two
+    var repeatTypeS = void 0,
+        repeatTypeT = void 0;
     if (_imageDimensionArePowerOf2(image)) {
-        var _repeatTypeS = gl.TEXTURE_WRAP_S;
-        var _repeatTypeT = gl.TEXTURE_WRAP_T;
+        repeatTypeS = gl.TEXTURE_WRAP_S;
+        repeatTypeT = gl.TEXTURE_WRAP_T;
     } else {
-        var _repeatTypeS2 = gl.CLAMP_TO_EDGE;
-        var _repeatTypeT2 = gl.CLAMP_TO_EDGE;
+        // note: clamp removes need for w x h being a power of two
+        repeatTypeS = gl.CLAMP_TO_EDGE;
+        repeatTypeT = gl.CLAMP_TO_EDGE;
     }
 
     if (data.wrapS && data.wrapS == 'repeat') {
