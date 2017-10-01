@@ -30,22 +30,19 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
 
     // set params
 
-    let repeatTypeS, repeatTypeT;
+    // note: clamp removes need for w x h being a power of two
+    let repeatTypeS = gl.CLAMP_TO_EDGE, repeatTypeT = gl.CLAMP_TO_EDGE;
     if(_imageDimensionArePowerOf2(image)) {
-        repeatTypeS = gl.TEXTURE_WRAP_S;
-        repeatTypeT = gl.TEXTURE_WRAP_T;
-    } else {
-        // note: clamp removes need for w x h being a power of two
-        repeatTypeS = gl.CLAMP_TO_EDGE;
-        repeatTypeT = gl.CLAMP_TO_EDGE;
+        repeatTypeS = gl.REPEAT;
+        repeatTypeT = gl.REPEAT;
     }
 
     if(data.wrapS && data.wrapS == 'repeat') {
-        repeatTypeS = gl.TEXTURE_WRAP_S;
+        repeatTypeS = gl.REPEAT;
     }
 
     if(data.wrapT && data.wrapT == 'repeat') {
-        repeatTypeT = gl.TEXTURE_WRAP_T;
+        repeatTypeT = gl.REPEAT;
     }
 
     if(data.wrapS && data.wrapS == 'mirrored-repeat') {
@@ -56,16 +53,18 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
         repeatTypeT = gl.MIRRORED_REPEAT;
     }
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapS, repeatTypeS);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapT, repeatTypeT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-    if(data.generateMips) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeatTypeS);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatTypeT);
 
     // set the texture image
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+    if(data.generateMips) {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
 
     // set the texture unit number to the sampler
     gl.uniform1i(data.uniform, textureUnitNo);

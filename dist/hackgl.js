@@ -3040,23 +3040,20 @@ function initTexture(gl, data, image) {
 
     // set params
 
-    var repeatTypeS = void 0,
-        repeatTypeT = void 0;
-    if (_imageDimensionArePowerOf2(image)) {
-        repeatTypeS = gl.TEXTURE_WRAP_S;
-        repeatTypeT = gl.TEXTURE_WRAP_T;
-    } else {
-        // note: clamp removes need for w x h being a power of two
-        repeatTypeS = gl.CLAMP_TO_EDGE;
+    // note: clamp removes need for w x h being a power of two
+    var repeatTypeS = gl.CLAMP_TO_EDGE,
         repeatTypeT = gl.CLAMP_TO_EDGE;
+    if (_imageDimensionArePowerOf2(image)) {
+        repeatTypeS = gl.REPEAT;
+        repeatTypeT = gl.REPEAT;
     }
 
     if (data.wrapS && data.wrapS == 'repeat') {
-        repeatTypeS = gl.TEXTURE_WRAP_S;
+        repeatTypeS = gl.REPEAT;
     }
 
     if (data.wrapT && data.wrapT == 'repeat') {
-        repeatTypeT = gl.TEXTURE_WRAP_T;
+        repeatTypeT = gl.REPEAT;
     }
 
     if (data.wrapS && data.wrapS == 'mirrored-repeat') {
@@ -3067,16 +3064,18 @@ function initTexture(gl, data, image) {
         repeatTypeT = gl.MIRRORED_REPEAT;
     }
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapS, repeatTypeS);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_wrapT, repeatTypeT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
-    if (data.generateMips) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeatTypeS);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatTypeT);
 
     // set the texture image
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+    if (data.generateMips) {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    }
 
     // set the texture unit number to the sampler
     gl.uniform1i(data.uniform, textureUnitNo);
@@ -3158,7 +3157,7 @@ var initUniforms = exports.initUniforms = function () {
 
                     case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 20;
+                            _context.next = 21;
                             break;
                         }
 
@@ -3171,71 +3170,73 @@ var initUniforms = exports.initUniforms = function () {
                         }
 
                         console.warn('hackGl: ' + (fbo ? 'frame buffer shader:' : 'fragment shader:') + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
-                        return _context.abrupt('continue', 17);
+                        return _context.abrupt('continue', 18);
 
                     case 12:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
-                        // await needed for texture image data loading
 
-                        _context.next = 15;
+                        console.log(uniformName);
+
+                        // await needed for texture image data loading
+                        _context.next = 16;
                         return setUniformValue(gl, updatedData);
 
-                    case 15:
+                    case 16:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 17:
+                    case 18:
                         _iteratorNormalCompletion = true;
                         _context.next = 6;
                         break;
 
-                    case 20:
-                        _context.next = 26;
+                    case 21:
+                        _context.next = 27;
                         break;
 
-                    case 22:
-                        _context.prev = 22;
+                    case 23:
+                        _context.prev = 23;
                         _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 26:
-                        _context.prev = 26;
+                    case 27:
                         _context.prev = 27;
+                        _context.prev = 28;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 29:
-                        _context.prev = 29;
+                    case 30:
+                        _context.prev = 30;
 
                         if (!_didIteratorError) {
-                            _context.next = 32;
+                            _context.next = 33;
                             break;
                         }
 
                         throw _iteratorError;
 
-                    case 32:
-                        return _context.finish(29);
-
                     case 33:
-                        return _context.finish(26);
+                        return _context.finish(30);
 
                     case 34:
-                        return _context.abrupt('return', result);
+                        return _context.finish(27);
 
                     case 35:
+                        return _context.abrupt('return', result);
+
+                    case 36:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[4, 22, 26, 34], [27,, 29, 33]]);
+        }, _callee, this, [[4, 23, 27, 35], [28,, 30, 34]]);
     }));
 
     return function initUniforms(_x, _x2, _x3) {
