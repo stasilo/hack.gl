@@ -2629,6 +2629,10 @@ var initFramebuffer = exports.initFramebuffer = function () {
                             gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
                             gl.bindFramebuffer(gl.FRAMEBUFFER, null); // change the drawing destination to color buffer
+                            //////////
+                            gl.bindTexture(gl.TEXTURE_2D, null);
+
+                            // gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
                         };
 
                         return _context.abrupt('return', {
@@ -2764,8 +2768,8 @@ function _initFramebufferObject(gl, options) {
 
     // unbind the buffer object
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 
     return framebuffer;
 }
@@ -3048,6 +3052,14 @@ function initTexture(gl, data, image) {
         repeatTypeT = gl.REPEAT;
     }
 
+    if (data.wrapS && data.wrapS == 'clamp') {
+        repeatTypeS = gl.CLAMP_TO_EDGE;
+    }
+
+    if (data.wrapT && data.wrapT == 'clamp') {
+        repeatTypeT = gl.CLAMP_TO_EDGE;
+    }
+
     if (data.wrapS && data.wrapS == 'repeat') {
         repeatTypeS = gl.REPEAT;
     }
@@ -3157,7 +3169,7 @@ var initUniforms = exports.initUniforms = function () {
 
                     case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 21;
+                            _context.next = 20;
                             break;
                         }
 
@@ -3170,73 +3182,71 @@ var initUniforms = exports.initUniforms = function () {
                         }
 
                         console.warn('hackGl: ' + (fbo ? 'frame buffer shader:' : 'fragment shader:') + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
-                        return _context.abrupt('continue', 18);
+                        return _context.abrupt('continue', 17);
 
                     case 12:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
-
-                        console.log(uniformName);
-
                         // await needed for texture image data loading
-                        _context.next = 16;
+
+                        _context.next = 15;
                         return setUniformValue(gl, updatedData);
 
-                    case 16:
+                    case 15:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 18:
+                    case 17:
                         _iteratorNormalCompletion = true;
                         _context.next = 6;
                         break;
 
-                    case 21:
-                        _context.next = 27;
+                    case 20:
+                        _context.next = 26;
                         break;
 
-                    case 23:
-                        _context.prev = 23;
+                    case 22:
+                        _context.prev = 22;
                         _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 27:
+                    case 26:
+                        _context.prev = 26;
                         _context.prev = 27;
-                        _context.prev = 28;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 30:
-                        _context.prev = 30;
+                    case 29:
+                        _context.prev = 29;
 
                         if (!_didIteratorError) {
-                            _context.next = 33;
+                            _context.next = 32;
                             break;
                         }
 
                         throw _iteratorError;
 
+                    case 32:
+                        return _context.finish(29);
+
                     case 33:
-                        return _context.finish(30);
+                        return _context.finish(26);
 
                     case 34:
-                        return _context.finish(27);
-
-                    case 35:
                         return _context.abrupt('return', result);
 
-                    case 36:
+                    case 35:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[4, 23, 27, 35], [28,, 30, 34]]);
+        }, _callee, this, [[4, 22, 26, 34], [27,, 29, 33]]);
     }));
 
     return function initUniforms(_x, _x2, _x3) {

@@ -77,6 +77,10 @@ export async function initFramebuffer(gl, options) {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); // change the drawing destination to color buffer
+        //////////
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
     }
 
     return {
@@ -177,8 +181,8 @@ function _initFramebufferObject(gl, options) {
 
     // unbind the buffer object
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 
     return framebuffer;
 }

@@ -37,6 +37,14 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
         repeatTypeT = gl.REPEAT;
     }
 
+    if(data.wrapS && data.wrapS == 'clamp') {
+        repeatTypeS = gl.CLAMP_TO_EDGE;
+    }
+
+    if(data.wrapT && data.wrapT == 'clamp') {
+        repeatTypeT = gl.CLAMP_TO_EDGE;
+    }
+
     if(data.wrapS && data.wrapS == 'repeat') {
         repeatTypeS = gl.REPEAT;
     }
