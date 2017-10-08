@@ -3,14 +3,16 @@ let context = null, canvas = null, streaming = false;
 let cameraUniformBase = {
     type: 't',
     needsUpdate: true,
-    value: null
+    value: null,
+    wrapS: 'clamp',
+    wrapT: 'clamp'
 }
 
-export async function initCameraUniform(options) {
+export async function initCameraUniform() {
     let video;
 
     try {
-        video = await _initCamera(options);
+        video = await _initCamera();
     } catch(error) {
         console.error(error);
         return;
@@ -24,7 +26,7 @@ export async function initCameraUniform(options) {
 }
 
 
-async function _initCamera(options) {
+async function _initCamera() {
     if(streaming) {
         return document.getElementById('video');
     }
@@ -35,14 +37,9 @@ async function _initCamera(options) {
     try {
         stream = await _getCameraStream();
     } catch(error) {
-        throw 'hackGl: Could not load camera stream!';
+        console.dir(error);
+        throw 'hackGl: Could not load camera stream:';
     }
-
-    // canvas = document.createElement('canvas');
-    // context = canvas.getContext('2d');
-    //
-    // canvas.width = options.canvas.width;
-    // canvas.height = options.canvas.height;
 
     video.srcObject = stream;
     video.play();

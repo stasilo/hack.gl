@@ -2539,25 +2539,25 @@ var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
 var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var initFramebuffer = exports.initFramebuffer = function () {
-    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, options) {
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, fboSettings, fboTextureName, options, prevFboUniforms) {
         var fboShader, fboUniformData, fbo, fboProgram, fboVertexCount, fboUniforms, renderToTexture;
         return _regenerator2.default.wrap(function _callee$(_context) {
             while (1) {
                 switch (_context.prev = _context.next) {
                     case 0:
-                        fboShader = toyFragmentHeader + '\n                     ' + (options.feedbackFbo.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                     ' + (options.feedbackFbo ? fboFragmentHeader : '') + '\n                     ' + options.feedbackFbo.fragmentShader;
-                        fboUniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, options.feedbackFbo.uniforms);
+                        fboShader = toyFragmentHeader + '\n                     ' + (fboSettings.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                     ' + (fboSettings ? fboFragmentHeader : '') + '\n                     ' + fboSettings.fragmentShader;
+                        fboUniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, fboSettings.uniforms, prevFboUniforms);
 
 
-                        fboUniformData.u_resolution.value = [options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height];
+                        fboUniformData.u_resolution.value = [options.resolution.width, options.resolution.height];
 
-                        if (!options.feedbackFbo.injectWebcamUniform) {
+                        if (!fboSettings.injectWebcamUniform) {
                             _context.next = 7;
                             break;
                         }
 
                         _context.next = 6;
-                        return (0, _initCamera.initCameraUniform)(options);
+                        return (0, _initCamera.initCameraUniform)();
 
                     case 6:
                         fboUniformData.u_camera = _context.sent;
@@ -2568,7 +2568,7 @@ var initFramebuffer = exports.initFramebuffer = function () {
                         fbo = void 0;
                         _context.prev = 8;
 
-                        fbo = _initFramebufferObject(gl, options);
+                        fbo = _initFramebufferObject(gl, fboSettings, options);
                         _context.next = 16;
                         break;
 
@@ -2581,7 +2581,7 @@ var initFramebuffer = exports.initFramebuffer = function () {
 
                     case 16:
 
-                        fboUniformData.u_fbo = {
+                        fboUniformData[fboTextureName] = {
                             type: 'fbo_t',
                             texture1: fbo.texture1,
                             texture2: fbo.texture2
@@ -2600,31 +2600,48 @@ var initFramebuffer = exports.initFramebuffer = function () {
 
                         gl.useProgram(fboProgram);
 
-                        fboVertexCount = (0, _initVertexBuffers2.default)(gl, fboProgram, options);
+                        fboVertexCount = (0, _initVertexBuffers2.default)(gl, fboProgram);
                         _context.next = 24;
-                        return (0, _uniformUtils.initUniforms)(gl, fboProgram, fboUniformData, true);
+                        return (0, _uniformUtils.initUniforms)(gl, fboProgram, fboUniformData, fboTextureName);
 
                     case 24:
                         fboUniforms = _context.sent;
 
+
+                        console.log("INITED FBO UNIFORMS: ");
+                        console.dir(fboUniforms);
+                        console.dir(fboUniforms[fboTextureName]);
+
                         renderToTexture = function renderToTexture() {
                             gl.useProgram(fboProgram);
+
+                            (0, _textureUtils.bindFboTextureToFragmentShader)(gl, fboUniforms);
                             fboUniforms = (0, _uniformUtils.updateUniforms)(gl, fboUniforms);
 
                             gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
 
-                            // ping pong texture
-                            var tmp = fbo.texture2;
-                            fbo.texture2 = fbo.texture1;
-                            fbo.texture1 = tmp;
+                            // ping pong?
+                            if (fboUniforms[fboTextureName]) {
+                                // ping pong texture
+                                var tmp = fbo.texture2;
+                                fbo.texture2 = fbo.texture1;
+                                fbo.texture1 = tmp;
 
-                            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture1, 0);
-                            gl.activeTexture(gl['TEXTURE' + fboUniforms.u_fbo.textureUnitNo]);
-                            gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
-                            // gl.uniform1i(fboUniforms.u_fbo.uniform, fboUniforms.u_fbo.textureUnitNo);
+                                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture1, 0);
+
+                                gl.activeTexture(gl['TEXTURE' + fboUniforms[fboTextureName].textureUnitNo]);
+                                gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
+                                gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
+
+                                // if(fboUniforms[fboTextureName]) {
+                                //     gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
+                                //     gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
+                                //     gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
+                                // }
+                            }
 
                             // clear and draw
-                            gl.viewport(0, 0, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height);
+                            gl.viewport(0, 0, options.resolution.width, options.resolution.height);
                             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                             gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
@@ -2637,10 +2654,11 @@ var initFramebuffer = exports.initFramebuffer = function () {
 
                         return _context.abrupt('return', {
                             renderToTexture: renderToTexture,
-                            fboUniform: fboUniformData.u_fbo
+                            fboUniform: fboUniforms[fboTextureName]
+                            // fboUniform: fboUniformData[fboTextureName],
                         });
 
-                    case 27:
+                    case 30:
                     case 'end':
                         return _context.stop();
                 }
@@ -2648,7 +2666,7 @@ var initFramebuffer = exports.initFramebuffer = function () {
         }, _callee, this, [[8, 12]]);
     }));
 
-    return function initFramebuffer(_x, _x2) {
+    return function initFramebuffer(_x, _x2, _x3, _x4, _x5) {
         return _ref.apply(this, arguments);
     };
 }();
@@ -2667,6 +2685,8 @@ var _initCamera = _dereq_('../webrtc/init-camera');
 
 var _defaultUniforms = _dereq_('./default-uniforms');
 
+var _textureUtils = _dereq_('./texture-utils');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var toyFragmentHeader = _dereq_('../shaders/pixeltoy/fragment-header.glsl');
@@ -2675,7 +2695,7 @@ var fboFragmentHeader = _dereq_('../shaders/fbo-fragment-header.glsl');
 var toyVertexShader = _dereq_('../shaders/pixeltoy/vertex-shader.glsl');
 var defaultFragmentShader = _dereq_('../shaders/pixeltoy/default-fragmentshader.glsl');
 
-function _initFramebufferObject(gl, options) {
+function _initFramebufferObject(gl, fboSettings, options) {
     var framebuffer = void 0,
         depthBuffer = void 0;
 
@@ -2722,7 +2742,7 @@ function _initFramebufferObject(gl, options) {
     // bind the object to target
     gl.bindTexture(gl.TEXTURE_2D, texture1);
     // setup texture to be written to
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.resolution.width, options.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // note: clamp removes need for w x h being a power of two
@@ -2734,7 +2754,7 @@ function _initFramebufferObject(gl, options) {
     // bind the object to target
     gl.bindTexture(gl.TEXTURE_2D, texture2);
     // setup texture2 to be written to
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.resolution.width, options.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // note: clamp removes need for w x h being a power of two
@@ -2752,7 +2772,7 @@ function _initFramebufferObject(gl, options) {
 
     // bind the object to target
     gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, options.resolution.width, options.resolution.height);
 
     // attach the texture and the renderbuffer object to the FBO
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -2774,7 +2794,7 @@ function _initFramebufferObject(gl, options) {
     return framebuffer;
 }
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-vertex-buffers":102,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],101:[function(_dereq_,module,exports){
+},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],101:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2784,6 +2804,10 @@ Object.defineProperty(exports, "__esModule", {
 var _regenerator = _dereq_('babel-runtime/regenerator');
 
 var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _getIterator2 = _dereq_('babel-runtime/core-js/get-iterator');
+
+var _getIterator3 = _interopRequireDefault(_getIterator2);
 
 var _extends2 = _dereq_('babel-runtime/helpers/extends');
 
@@ -2811,6 +2835,8 @@ var _executeCallbackOrArray2 = _interopRequireDefault(_executeCallbackOrArray);
 
 var _initCamera = _dereq_('../webrtc/init-camera');
 
+var _textureUtils = _dereq_('./texture-utils');
+
 var _defaultUniforms = _dereq_('./default-uniforms');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -2823,7 +2849,7 @@ var defaultFragmentShader = _dereq_('../shaders/pixeltoy/default-fragmentshader.
 
 exports.default = function () {
     var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, options) {
-        var uniformData, fragmentShader, fbo, program, vertexCount, uniforms, _renderFragmentShader, _render;
+        var uniformData, fragmentShader, fbos, prevFboUniforms, fboCount, _prevFboUniforms, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, fboSettings, fbo, _fbo, program, vertexCount, uniforms, _renderFragmentShader, _render;
 
         return _regenerator2.default.wrap(function _callee$(_context) {
             while (1) {
@@ -2847,43 +2873,144 @@ exports.default = function () {
                         uniformData.u_camera = _context.sent;
 
                     case 7:
-                        fbo = null;
+                        fbos = [];
+                        prevFboUniforms = {};
 
                         if (!options.feedbackFbo) {
-                            _context.next = 13;
+                            _context.next = 50;
                             break;
                         }
 
-                        _context.next = 11;
-                        return (0, _initFbo.initFramebuffer)(gl, options);
+                        fboCount = 0;
 
-                    case 11:
+                        if (!options.feedbackFbo.length) {
+                            _context.next = 45;
+                            break;
+                        }
+
+                        _prevFboUniforms = {};
+                        _iteratorNormalCompletion = true;
+                        _didIteratorError = false;
+                        _iteratorError = undefined;
+                        _context.prev = 16;
+                        _iterator = (0, _getIterator3.default)(options.feedbackFbo);
+
+                    case 18:
+                        if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
+                            _context.next = 29;
+                            break;
+                        }
+
+                        fboSettings = _step.value;
+                        _context.next = 22;
+                        return (0, _initFbo.initFramebuffer)(gl, fboSettings, 'u_fbo' + fboCount, options, _prevFboUniforms);
+
+                    case 22:
                         fbo = _context.sent;
 
-                        uniformData.u_fbo = fbo.fboUniform;
+                        // let fbo = await initFramebuffer(gl, fboSettings, `u_fbo${fboCount}`, options, {});
 
-                    case 13:
+                        if (typeof fbo.fboUniform !== 'undefined') {
+                            uniformData['u_fbo' + fboCount] = fbo.fboUniform;
+                            console.log("SAVING UNIFORM DATA FOR MAIN FRAG SHADER: ");
+                            console.dir(fbo.fboUniform);
+
+                            _prevFboUniforms['u_fbo' + fboCount] = fbo.fboUniform;
+                        }
+
+                        //console.log("ADDED FBO UNIFORM: ");
+                        //console.dir(fbo.fboUniform)
+
+                        // uniformData.u_fbo = fbo.fboUniform;
+
+                        fbos.push(fbo);
+
+                        fboCount++;
+
+                    case 26:
+                        _iteratorNormalCompletion = true;
+                        _context.next = 18;
+                        break;
+
+                    case 29:
+                        _context.next = 35;
+                        break;
+
+                    case 31:
+                        _context.prev = 31;
+                        _context.t0 = _context['catch'](16);
+                        _didIteratorError = true;
+                        _iteratorError = _context.t0;
+
+                    case 35:
+                        _context.prev = 35;
+                        _context.prev = 36;
+
+                        if (!_iteratorNormalCompletion && _iterator.return) {
+                            _iterator.return();
+                        }
+
+                    case 38:
+                        _context.prev = 38;
+
+                        if (!_didIteratorError) {
+                            _context.next = 41;
+                            break;
+                        }
+
+                        throw _iteratorError;
+
+                    case 41:
+                        return _context.finish(38);
+
+                    case 42:
+                        return _context.finish(35);
+
+                    case 43:
+                        _context.next = 50;
+                        break;
+
+                    case 45:
+                        _context.next = 47;
+                        return (0, _initFbo.initFramebuffer)(gl, options.feedbackFbo, 'u_fbo' + fboCount, options);
+
+                    case 47:
+                        _fbo = _context.sent;
+
+                        uniformData['u_fbo' + fboCount] = _fbo.fboUniform;
+
+                        fbos.push(_fbo);
+
+                    case 50:
                         program = (0, _createGlProgram2.default)(gl, toyVertexShader, fragmentShader);
 
                         if (program) {
-                            _context.next = 16;
+                            _context.next = 53;
                             break;
                         }
 
                         throw 'hack.Gl: failed to create main gl program!';
 
-                    case 16:
+                    case 53:
 
                         gl.useProgram(program);
                         vertexCount = (0, _initVertexBuffers2.default)(gl, program, options);
-                        _context.next = 20;
-                        return (0, _uniformUtils.initUniforms)(gl, program, uniformData);
+                        _context.next = 57;
+                        return (0, _uniformUtils.initUniforms)(gl, program, uniformData, 'main fragment');
 
-                    case 20:
+                    case 57:
                         uniforms = _context.sent;
+
+
+                        console.log("MAIN FRAGMENT UNIFORMS!!!");
+                        console.dir(uniforms);
 
                         _renderFragmentShader = function _renderFragmentShader() {
                             gl.useProgram(program);
+
+                            // bind all textures
+
+                            (0, _textureUtils.bindFboTextureToFragmentShader)(gl, uniforms);
                             uniforms = (0, _uniformUtils.updateUniforms)(gl, uniforms, options);
 
                             gl.viewport(0, 0, options.resolution.width, options.resolution.height); // set a viewport for FBO
@@ -2891,12 +3018,40 @@ exports.default = function () {
                             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
                         };
 
+                        // console.log("UNIFORM DATA");
+                        // console.dir(uniformData);
+                        // console.dir(uniforms);
+                        // console.log("fbos.length: " + fbos.length);
+
                         // main render loop
 
 
                         _render = function _render() {
-                            if (options.feedbackFbo && uniforms.u_fbo) {
-                                fbo.renderToTexture();
+                            if (fbos.length) {
+                                var _iteratorNormalCompletion2 = true;
+                                var _didIteratorError2 = false;
+                                var _iteratorError2 = undefined;
+
+                                try {
+                                    for (var _iterator2 = (0, _getIterator3.default)(fbos), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                        var _fbo2 = _step2.value;
+
+                                        _fbo2.renderToTexture();
+                                    }
+                                } catch (err) {
+                                    _didIteratorError2 = true;
+                                    _iteratorError2 = err;
+                                } finally {
+                                    try {
+                                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                            _iterator2.return();
+                                        }
+                                    } finally {
+                                        if (_didIteratorError2) {
+                                            throw _iteratorError2;
+                                        }
+                                    }
+                                }
                             }
 
                             _renderFragmentShader();
@@ -2907,12 +3062,12 @@ exports.default = function () {
 
                         _render();
 
-                    case 24:
+                    case 63:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this);
+        }, _callee, this, [[16, 31, 35, 43], [36,, 38, 42]]);
     }));
 
     function initPixelToy(_x, _x2) {
@@ -2924,14 +3079,14 @@ exports.default = function () {
 
 module.exports = exports['default'];
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../utils/execute-callback-or-array":113,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-fbo":100,"./init-vertex-buffers":102,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
+},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../utils/execute-callback-or-array":113,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-fbo":100,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.default = initVertexBuffers;
-function initVertexBuffers(gl, program, options) {
+function initVertexBuffers(gl, program) {
     // cover whole canvas with quad
     var vertices = new Float32Array([-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0]);
 
@@ -2969,6 +3124,14 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.loadTextureData = undefined;
+
+var _toConsumableArray2 = _dereq_('babel-runtime/helpers/toConsumableArray');
+
+var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
+
+var _keys = _dereq_('babel-runtime/core-js/object/keys');
+
+var _keys2 = _interopRequireDefault(_keys);
 
 var _regenerator = _dereq_('babel-runtime/regenerator');
 
@@ -3014,6 +3177,7 @@ var loadTextureData = exports.loadTextureData = function () {
 
 exports.initTexture = initTexture;
 exports.initFboTexture = initFboTexture;
+exports.bindFboTexture = bindFboTexture;
 exports.bindFboTextureToFragmentShader = bindFboTextureToFragmentShader;
 exports.updateTexture = updateTexture;
 
@@ -3022,8 +3186,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var textureUnitNo = 0;
 
 function initTexture(gl, data, image) {
-    var unitNoOffset = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-
     var maxTextureCount = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
     if (textureUnitNo > maxTextureCount) {
         throw 'hackGl: max number of texture units (' + maxTextureCount + ') exceeded';
@@ -3031,16 +3193,18 @@ function initTexture(gl, data, image) {
 
     var texture = gl.createTexture();
 
+    console.log("INIT TEXTURE TO no: " + textureUnitNo);
+
+    // activate texture
+    gl.activeTexture(gl['TEXTURE' + textureUnitNo]);
+
+    // bind texture object
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
     // flip axes to xy instead of yx
     if (typeof data.flipY === 'undefined' || data.flipY != false) {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     }
-
-    // activate texture
-    gl.activeTexture(gl['TEXTURE' + (textureUnitNo + unitNoOffset)]);
-
-    // bind texture object
-    gl.bindTexture(gl.TEXTURE_2D, texture);
 
     // set params
 
@@ -3092,12 +3256,15 @@ function initTexture(gl, data, image) {
     // set the texture unit number to the sampler
     gl.uniform1i(data.uniform, textureUnitNo);
     data.textureUnitNo = textureUnitNo;
+    data.texture = texture;
 
     textureUnitNo++;
-    return texture;
+    return data;
 }
 
 function initFboTexture(gl, data) {
+    console.log("INIT FBBBBOOOOO  TEXTURE TO no: " + textureUnitNo);
+
     gl.activeTexture(gl['TEXTURE' + textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
     gl.uniform1i(data.uniform, textureUnitNo);
@@ -3107,13 +3274,38 @@ function initFboTexture(gl, data) {
     return data;
 }
 
+function bindFboTexture(gl, data) {
+    console.log("BIND !!!! FBBBBOOOOO  TEXTURE TO no: " + data.textureUnitNo);
+
+    gl.activeTexture(gl['TEXTURE' + data.textureUnitNo]);
+    gl.bindTexture(gl.TEXTURE_2D, data.texture2);
+    // gl.bindTexture(gl.TEXTURE_2D, data.texture1);
+
+    gl.uniform1i(data.uniform, data.textureUnitNo);
+    // textureUnitNo++;
+
+    return data;
+}
+
+//FRAMFÖR ALLT DENNA - ANROPA NÄR SISTA SHADERN (FRAGMENT) RENDERAS
 function bindFboTextureToFragmentShader(gl, uniforms) {
-    gl.activeTexture(gl['TEXTURE' + uniforms.u_fbo.textureUnitNo]);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_fbo.texture2);
-    gl.uniform1i(uniforms.u_fbo.uniform, uniforms.u_fbo.textureUnitNo);
+    var fboUniforms = (0, _keys2.default)(uniforms).reduce(function (a, uniformName) {
+        return uniformName.startsWith('u_fbo') ? [].concat((0, _toConsumableArray3.default)(a), [uniforms[uniformName]]) : a;
+    }, []);
+
+    // console.dir(uniforms);
+    // console.log('BIND FBO TEXTURE');
+    // console.dir(fboUniforms);
+
+    fboUniforms.map(function (uniform) {
+        gl.activeTexture(gl['TEXTURE' + uniform.textureUnitNo]);
+        gl.bindTexture(gl.TEXTURE_2D, uniform.texture2);
+        gl.uniform1i(uniform.uniform, uniform.textureUnitNo);
+    });
 }
 
 function updateTexture(gl, data) {
+    gl.activeTexture(gl['TEXTURE' + data.textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
 }
@@ -3122,7 +3314,7 @@ function _imageDimensionArePowerOf2(image) {
     return (image.naturalWidth & image.naturalWidth - 1) == 0 && (image.naturalHeight & image.naturalHeight - 1) == 0;
 }
 
-},{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/regenerator":11}],104:[function(_dereq_,module,exports){
+},{"babel-runtime/core-js/object/keys":5,"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/toConsumableArray":10,"babel-runtime/regenerator":11}],104:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3151,9 +3343,7 @@ var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
 var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var initUniforms = exports.initUniforms = function () {
-    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, program, uniformData) {
-        var fbo = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
-
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, program, uniformData, shaderName) {
         var result, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, _step$value, uniformName, data, uniform, updatedData;
 
         return _regenerator2.default.wrap(function _callee$(_context) {
@@ -3169,87 +3359,90 @@ var initUniforms = exports.initUniforms = function () {
 
                     case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 20;
+                            _context.next = 21;
                             break;
                         }
 
                         _step$value = (0, _slicedToArray3.default)(_step.value, 2), uniformName = _step$value[0], data = _step$value[1];
+
+                        console.log(shaderName + ': INIT UNIFORM: ' + uniformName);
+
                         uniform = gl.getUniformLocation(program, new String(uniformName));
 
                         if (uniform) {
-                            _context.next = 12;
+                            _context.next = 13;
                             break;
                         }
 
-                        console.warn('hackGl: ' + (fbo ? 'frame buffer shader:' : 'fragment shader:') + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
-                        return _context.abrupt('continue', 17);
+                        console.warn('hackGl: ' + shaderName + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
+                        return _context.abrupt('continue', 18);
 
-                    case 12:
+                    case 13:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
                         // await needed for texture image data loading
 
-                        _context.next = 15;
+                        _context.next = 16;
                         return setUniformValue(gl, updatedData);
 
-                    case 15:
+                    case 16:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 17:
+                    case 18:
                         _iteratorNormalCompletion = true;
                         _context.next = 6;
                         break;
 
-                    case 20:
-                        _context.next = 26;
+                    case 21:
+                        _context.next = 27;
                         break;
 
-                    case 22:
-                        _context.prev = 22;
+                    case 23:
+                        _context.prev = 23;
                         _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 26:
-                        _context.prev = 26;
+                    case 27:
                         _context.prev = 27;
+                        _context.prev = 28;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 29:
-                        _context.prev = 29;
+                    case 30:
+                        _context.prev = 30;
 
                         if (!_didIteratorError) {
-                            _context.next = 32;
+                            _context.next = 33;
                             break;
                         }
 
                         throw _iteratorError;
 
-                    case 32:
-                        return _context.finish(29);
-
                     case 33:
-                        return _context.finish(26);
+                        return _context.finish(30);
 
                     case 34:
-                        return _context.abrupt('return', result);
+                        return _context.finish(27);
 
                     case 35:
+                        return _context.abrupt('return', result);
+
+                    case 36:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[4, 22, 26, 34], [27,, 29, 33]]);
+        }, _callee, this, [[4, 23, 27, 35], [28,, 30, 34]]);
     }));
 
-    return function initUniforms(_x, _x2, _x3) {
+    return function initUniforms(_x, _x2, _x3, _x4) {
         return _ref.apply(this, arguments);
     };
 }();
@@ -3291,7 +3484,7 @@ var setUniformValue = exports.setUniformValue = function () {
                     case 11:
                         imageData = _context2.t1;
 
-                        data.texture = (0, _textureUtils.initTexture)(gl, data, imageData);
+                        data = (0, _textureUtils.initTexture)(gl, data, imageData);
                         _context2.next = 16;
                         break;
 
@@ -3304,8 +3497,13 @@ var setUniformValue = exports.setUniformValue = function () {
                         return _context2.abrupt('break', 29);
 
                     case 17:
-                        if (!updating) {
+                        if (!updating && !data.textureUnitNo) {
+                            console.log("SET UNIFORM VALUE - INIT FBO TEXTURE!!!!!!!!!!!");
+                            console.dir(data);
+
                             data = (0, _textureUtils.initFboTexture)(gl, data);
+                        } else {
+                            data = (0, _textureUtils.bindFboTexture)(gl, data);
                         }
 
                         return _context2.abrupt('break', 29);
@@ -3356,9 +3554,9 @@ var _iterateObject2 = _interopRequireDefault(_iterateObject);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function updateUniforms(gl, uniforms, options) {
-    if (typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
-        (0, _textureUtils.bindFboTextureToFragmentShader)(gl, uniforms);
-    }
+    // if(typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
+    //     bindFboTextureToFragmentShader(gl, uniforms);
+    // }
 
     var result = {};
     var _iteratorNormalCompletion2 = true;
@@ -3701,7 +3899,7 @@ module.exports = exports['default'];
 module.exports = "uniform sampler2D u_camera;\n";
 
 },{}],109:[function(_dereq_,module,exports){
-module.exports = "uniform sampler2D u_fbo;\n";
+module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform sampler2D u_fbo2;\n";
 
 },{}],110:[function(_dereq_,module,exports){
 module.exports = "void main() {\n    vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n}\n";
@@ -3881,7 +4079,7 @@ var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
 var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var initCameraUniform = exports.initCameraUniform = function () {
-    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(options) {
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee() {
         var video;
         return _regenerator2.default.wrap(function _callee$(_context) {
             while (1) {
@@ -3890,7 +4088,7 @@ var initCameraUniform = exports.initCameraUniform = function () {
                         video = void 0;
                         _context.prev = 1;
                         _context.next = 4;
-                        return _initCamera(options);
+                        return _initCamera();
 
                     case 4:
                         video = _context.sent;
@@ -3920,13 +4118,13 @@ var initCameraUniform = exports.initCameraUniform = function () {
         }, _callee, this, [[1, 7]]);
     }));
 
-    return function initCameraUniform(_x) {
+    return function initCameraUniform() {
         return _ref.apply(this, arguments);
     };
 }();
 
 var _initCamera = function () {
-    var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(options) {
+    var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2() {
         var video, stream;
         return _regenerator2.default.wrap(function _callee2$(_context2) {
             while (1) {
@@ -3948,21 +4146,17 @@ var _initCamera = function () {
 
                     case 7:
                         stream = _context2.sent;
-                        _context2.next = 13;
+                        _context2.next = 14;
                         break;
 
                     case 10:
                         _context2.prev = 10;
                         _context2.t0 = _context2['catch'](4);
-                        throw 'hackGl: Could not load camera stream!';
 
-                    case 13:
+                        console.dir(_context2.t0);
+                        throw 'hackGl: Could not load camera stream:';
 
-                        // canvas = document.createElement('canvas');
-                        // context = canvas.getContext('2d');
-                        //
-                        // canvas.width = options.canvas.width;
-                        // canvas.height = options.canvas.height;
+                    case 14:
 
                         video.srcObject = stream;
                         video.play();
@@ -3974,7 +4168,7 @@ var _initCamera = function () {
                             }, false);
                         }));
 
-                    case 17:
+                    case 18:
                     case 'end':
                         return _context2.stop();
                 }
@@ -3982,7 +4176,7 @@ var _initCamera = function () {
         }, _callee2, this, [[4, 10]]);
     }));
 
-    return function _initCamera(_x2) {
+    return function _initCamera() {
         return _ref2.apply(this, arguments);
     };
 }();
@@ -4031,7 +4225,9 @@ var context = null,
 var cameraUniformBase = {
     type: 't',
     needsUpdate: true,
-    value: null
+    value: null,
+    wrapS: 'clamp',
+    wrapT: 'clamp'
 };
 
 function _injectVideoElement() {

@@ -1,4 +1,4 @@
-export default function initVertexBuffers(gl, program, options) {
+export default function initVertexBuffers(gl, program) {
     // cover whole canvas with quad
     let vertices = new Float32Array([
         -1.0, 1.0,

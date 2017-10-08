@@ -18,7 +18,7 @@
                 width: 800,
                 height: 400
             },
-            feedbackFbo: {
+            feedbackFbo: [{
                 injectWebcamUniform: true,
                 uniforms: {
                     u_texture1: {
@@ -41,8 +41,7 @@
                             0.5 + uv.y * abs(sin(u_time+uv.x*1.0)*0.5)
                         );
 
-                        vec4 src = texture2D(u_fbo, uv);
-
+                        vec4 src = texture2D(u_fbo0, uv);
                         vec4 src2 = texture2D(u_texture1, coords);
                         vec4 sum = texture2D(u_camera, tc);
 
@@ -53,10 +52,30 @@
                     }
                 `
             },
+            {
+                uniforms: {
+                    u_texture1: {
+                        type: 't',
+                        value: null,
+                        url: 'assets/slime.png'
+                    }
+                },
+                fragmentShader: `
+                    uniform sampler2D u_texture1;
+
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                        gl_FragColor = texture2D(u_fbo1, uv) * 1.5;
+                        gl_FragColor = texture2D(u_fbo0, uv) * 2.5;
+                    }
+                `
+            }],
+            // injectWebcamUniform: true,
             fragmentShader: `
                 void main() {
                     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-                    gl_FragColor = texture2D(u_fbo, uv);
+                    // gl_FragColor = texture2D(u_fbo0, uv);
+                    gl_FragColor = texture2D(u_fbo1, uv);
                 }
             `,
         });

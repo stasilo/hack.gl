@@ -9,7 +9,7 @@ export async function loadTextureData(data) {
     });
 }
 
-export function initTexture(gl, data, image, unitNoOffset = 0) {
+export function initTexture(gl, data, image) {
     const maxTextureCount = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
     if(textureUnitNo > maxTextureCount) {
         throw `hackGl: max number of texture units (${maxTextureCount}) exceeded`;
@@ -17,16 +17,18 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
 
     let texture = gl.createTexture();
 
+    console.log("INIT TEXTURE TO no: " + textureUnitNo);
+
+    // activate texture
+    gl.activeTexture(gl[`TEXTURE${textureUnitNo}`]);
+
+    // bind texture object
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
     // flip axes to xy instead of yx
     if(typeof data.flipY === 'undefined' || data.flipY != false) {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
     }
-
-    // activate texture
-    gl.activeTexture(gl[`TEXTURE${textureUnitNo + unitNoOffset}`]);
-
-    // bind texture object
-    gl.bindTexture(gl.TEXTURE_2D, texture);
 
     // set params
 
@@ -74,15 +76,19 @@ export function initTexture(gl, data, image, unitNoOffset = 0) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
 
+
     // set the texture unit number to the sampler
     gl.uniform1i(data.uniform, textureUnitNo);
     data.textureUnitNo = textureUnitNo;
+    data.texture = texture;
 
     textureUnitNo++;
-    return texture;
+    return data;
 }
 
 export function initFboTexture(gl, data) {
+    console.log("INIT FBBBBOOOOO  TEXTURE TO no: " + textureUnitNo);
+
     gl.activeTexture(gl[`TEXTURE${textureUnitNo}`]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
     gl.uniform1i(data.uniform, textureUnitNo);
@@ -92,13 +98,40 @@ export function initFboTexture(gl, data) {
     return data;
 }
 
+export function bindFboTexture(gl, data) {
+    console.log("BIND !!!! FBBBBOOOOO  TEXTURE TO no: " + data.textureUnitNo);
+
+    gl.activeTexture(gl[`TEXTURE${data.textureUnitNo}`]);
+    gl.bindTexture(gl.TEXTURE_2D, data.texture2);
+    // gl.bindTexture(gl.TEXTURE_2D, data.texture1);
+
+    gl.uniform1i(data.uniform, data.textureUnitNo);
+    // textureUnitNo++;
+
+    return data;
+}
+
+//FRAMFÖR ALLT DENNA - ANROPA NÄR SISTA SHADERN (FRAGMENT) RENDERAS
 export function bindFboTextureToFragmentShader(gl, uniforms) {
-    gl.activeTexture(gl[`TEXTURE${uniforms.u_fbo.textureUnitNo }`]);
-    gl.bindTexture(gl.TEXTURE_2D, uniforms.u_fbo.texture2);
-    gl.uniform1i(uniforms.u_fbo.uniform, uniforms.u_fbo.textureUnitNo);
+    let fboUniforms = Object.keys(uniforms).reduce((a, uniformName) => (
+        uniformName.startsWith('u_fbo')
+        ? [...a, uniforms[uniformName]]
+        : a
+    ), []);
+
+    // console.dir(uniforms);
+    // console.log('BIND FBO TEXTURE');
+    // console.dir(fboUniforms);
+
+    fboUniforms.map(uniform => {
+        gl.activeTexture(gl[`TEXTURE${uniform.textureUnitNo }`]);
+        gl.bindTexture(gl.TEXTURE_2D, uniform.texture2);
+        gl.uniform1i(uniform.uniform, uniform.textureUnitNo);
+    });
 }
 
 export function updateTexture(gl, data) {
+    gl.activeTexture(gl[`TEXTURE${data.textureUnitNo}`]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
 }

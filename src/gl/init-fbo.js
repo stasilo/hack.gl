@@ -3,6 +3,7 @@ import initVertexBuffers from './init-vertex-buffers';
 import {initUniforms, updateUniforms, setUniformValue} from './uniform-utils';
 import {initCameraUniform} from '../webrtc/init-camera';
 import {defaultUniforms} from './default-uniforms';
+import {bindFboTextureToFragmentShader} from './texture-utils';
 
 const toyFragmentHeader = require('../shaders/pixeltoy/fragment-header.glsl');
 const cameraFragmentHeader = require('../shaders/camera-fragment-header.glsl');
@@ -10,36 +11,37 @@ const fboFragmentHeader = require('../shaders/fbo-fragment-header.glsl');
 const toyVertexShader = require('../shaders/pixeltoy/vertex-shader.glsl');
 const defaultFragmentShader = require('../shaders/pixeltoy/default-fragmentshader.glsl');
 
-export async function initFramebuffer(gl, options) {
+export async function initFramebuffer(gl, fboSettings, fboTextureName, options, prevFboUniforms) {
     let fboShader = `${toyFragmentHeader}
-                     ${(options.feedbackFbo.injectWebcamUniform ? cameraFragmentHeader : '')}
-                     ${(options.feedbackFbo ? fboFragmentHeader : '')}
-                     ${(options.feedbackFbo.fragmentShader)}`;
+                     ${(fboSettings.injectWebcamUniform ? cameraFragmentHeader : '')}
+                     ${(fboSettings ? fboFragmentHeader : '')}
+                     ${(fboSettings.fragmentShader)}`;
 
     let fboUniformData = {
         ...defaultUniforms,
-        ...options.feedbackFbo.uniforms
+        ...fboSettings.uniforms,
+        ...prevFboUniforms
     };
 
     fboUniformData.u_resolution.value = [
-        options.feedbackFbo.resolution.width,
-        options.feedbackFbo.resolution.height
+        options.resolution.width,
+        options.resolution.height
     ];
 
-    if(options.feedbackFbo.injectWebcamUniform) {
-        fboUniformData.u_camera = await initCameraUniform(options);
+    if(fboSettings.injectWebcamUniform) {
+        fboUniformData.u_camera = await initCameraUniform();
     }
 
     // initialize framebuffer object (FBO)
     let fbo;
     try {
-        fbo = _initFramebufferObject(gl, options);
+        fbo = _initFramebufferObject(gl, fboSettings, options);
     } catch(error) {
         console.error(`hackGl: ${error}`);
         return;
     }
 
-    fboUniformData.u_fbo = {
+    fboUniformData[fboTextureName] = {
         type: 'fbo_t',
         texture1: fbo.texture1,
         texture2: fbo.texture2
@@ -52,27 +54,44 @@ export async function initFramebuffer(gl, options) {
 
     gl.useProgram(fboProgram);
 
-    let fboVertexCount = initVertexBuffers(gl, fboProgram, options);
-    let fboUniforms = await initUniforms(gl, fboProgram, fboUniformData, true);
+    let fboVertexCount = initVertexBuffers(gl, fboProgram);
+    let fboUniforms = await initUniforms(gl, fboProgram, fboUniformData, fboTextureName);
+
+
+    console.log("INITED FBO UNIFORMS: ");
+    console.dir(fboUniforms);
+    console.dir(fboUniforms[fboTextureName]);
 
     let renderToTexture = () => {
         gl.useProgram(fboProgram);
+
+        bindFboTextureToFragmentShader(gl, fboUniforms);
         fboUniforms = updateUniforms(gl, fboUniforms);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
 
-        // ping pong texture
-        let tmp = fbo.texture2;
-        fbo.texture2 = fbo.texture1;
-        fbo.texture1 = tmp;
+        // ping pong?
+        if(fboUniforms[fboTextureName]) {
+            // ping pong texture
+            let tmp = fbo.texture2;
+            fbo.texture2 = fbo.texture1;
+            fbo.texture1 = tmp;
 
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture1, 0);
-        gl.activeTexture(gl[`TEXTURE${fboUniforms.u_fbo.textureUnitNo }`]);
-        gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
-        // gl.uniform1i(fboUniforms.u_fbo.uniform, fboUniforms.u_fbo.textureUnitNo);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo.texture1, 0);
+
+            gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
+            gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
+            gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
+
+            // if(fboUniforms[fboTextureName]) {
+            //     gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
+            //     gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
+            //     gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
+            // }
+        }
 
         // clear and draw
-        gl.viewport(0, 0, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height);
+        gl.viewport(0, 0, options.resolution.width, options.resolution.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
@@ -85,11 +104,12 @@ export async function initFramebuffer(gl, options) {
 
     return {
         renderToTexture,
-        fboUniform: fboUniformData.u_fbo,
+        fboUniform: fboUniforms[fboTextureName],
+        // fboUniform: fboUniformData[fboTextureName],
     }
 }
 
-function _initFramebufferObject(gl, options) {
+function _initFramebufferObject(gl, fboSettings, options) {
     let framebuffer, depthBuffer;
 
     // define the error handling function
@@ -135,7 +155,7 @@ function _initFramebufferObject(gl, options) {
     // bind the object to target
     gl.bindTexture(gl.TEXTURE_2D, texture1);
     // setup texture to be written to
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.resolution.width, options.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // note: clamp removes need for w x h being a power of two
@@ -147,7 +167,7 @@ function _initFramebufferObject(gl, options) {
     // bind the object to target
     gl.bindTexture(gl.TEXTURE_2D, texture2);
     // setup texture2 to be written to
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, options.resolution.width, options.resolution.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // note: clamp removes need for w x h being a power of two
@@ -165,12 +185,16 @@ function _initFramebufferObject(gl, options) {
 
     // bind the object to target
     gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, options.feedbackFbo.resolution.width, options.feedbackFbo.resolution.height);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, options.resolution.width, options.resolution.height);
 
     // attach the texture and the renderbuffer object to the FBO
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
+
+
+
+
 
     // check if FBO is configured correctly
     let e = gl.checkFramebufferStatus(gl.FRAMEBUFFER);

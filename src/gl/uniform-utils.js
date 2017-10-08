@@ -1,13 +1,16 @@
-import {initTexture, initFboTexture, updateTexture, loadTextureData, bindFboTextureToFragmentShader} from './texture-utils';
+import {initTexture, initFboTexture, bindFboTexture, updateTexture, loadTextureData, bindFboTextureToFragmentShader} from './texture-utils';
 import iterateObject from '../utils/iterate-object';
 
-export async function initUniforms(gl, program, uniformData, fbo = false) {
+export async function initUniforms(gl, program, uniformData, shaderName) {
     let result = {};
 
+
     for (let [uniformName, data] of iterateObject(uniformData)) {
+        console.log(`${shaderName}: INIT UNIFORM: ${uniformName}`);
+
         let uniform = gl.getUniformLocation(program, new String(uniformName));
         if (!uniform) {
-            console.warn(`hackGl: ${fbo ? 'frame buffer shader:' : 'fragment shader:'} ` +
+            console.warn(`hackGl: ${shaderName} ` +
                          `failed to get the storage location of "${uniformName}" - ignoring variable. ` +
                          'Perhaps you forgot to use it in your shader?');
             continue;
@@ -27,9 +30,9 @@ export async function initUniforms(gl, program, uniformData, fbo = false) {
 }
 
 export function updateUniforms(gl, uniforms, options) {
-    if(typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
-        bindFboTextureToFragmentShader(gl, uniforms);
-    }
+    // if(typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
+    //     bindFboTextureToFragmentShader(gl, uniforms);
+    // }
 
     let result = {};
     for (let [key, data] of iterateObject(uniforms)) {
@@ -49,7 +52,7 @@ export async function setUniformValue(gl, data, updating = false) {
         case 't':
             if(!updating) {
                 let imageData = typeof data.url !== 'undefined' ? await loadTextureData(data) : data.value;
-                data.texture = initTexture(gl, data, imageData);
+                data = initTexture(gl, data, imageData);
             } else if(updating && data.needsUpdate) {
                 updateTexture(gl, data);
             }
@@ -58,8 +61,13 @@ export async function setUniformValue(gl, data, updating = false) {
 
         // fbo texture sampler
         case 'fbo_t':
-            if(!updating) {
+            if(!updating && !data.textureUnitNo) {
+                console.log("SET UNIFORM VALUE - INIT FBO TEXTURE!!!!!!!!!!!")
+                console.dir(data);
+
                 data = initFboTexture(gl, data);
+            } else {
+                data = bindFboTexture(gl, data);
             }
 
             break;
