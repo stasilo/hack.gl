@@ -3,7 +3,7 @@ import initVertexBuffers from './init-vertex-buffers';
 import {initUniforms, updateUniforms, setUniformValue} from './uniform-utils';
 import {initCameraUniform} from '../webrtc/init-camera';
 import {defaultUniforms} from './default-uniforms';
-import {bindFboTextureToFragmentShader} from './texture-utils';
+import {rebindFboTextures} from './texture-utils';
 
 const toyFragmentHeader = require('../shaders/pixeltoy/fragment-header.glsl');
 const cameraFragmentHeader = require('../shaders/camera-fragment-header.glsl');
@@ -57,15 +57,10 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
     let fboVertexCount = initVertexBuffers(gl, fboProgram);
     let fboUniforms = await initUniforms(gl, fboProgram, fboUniformData, fboTextureName);
 
-
-    console.log("INITED FBO UNIFORMS: ");
-    console.dir(fboUniforms);
-    console.dir(fboUniforms[fboTextureName]);
-
     let renderToTexture = () => {
         gl.useProgram(fboProgram);
 
-        bindFboTextureToFragmentShader(gl, fboUniforms);
+        rebindFboTextures(gl, fboUniforms);
         fboUniforms = updateUniforms(gl, fboUniforms);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
@@ -82,12 +77,6 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
             gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
             gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
             gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
-
-            // if(fboUniforms[fboTextureName]) {
-            //     gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
-            //     gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
-            //     gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
-            // }
         }
 
         // clear and draw
@@ -96,16 +85,13 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null); // change the drawing destination to color buffer
-        //////////
         gl.bindTexture(gl.TEXTURE_2D, null);
-
         // gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
     }
 
     return {
         renderToTexture,
         fboUniform: fboUniforms[fboTextureName],
-        // fboUniform: fboUniformData[fboTextureName],
     }
 }
 
@@ -191,10 +177,6 @@ function _initFramebufferObject(gl, fboSettings, options) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
-
-
-
-
 
     // check if FBO is configured correctly
     let e = gl.checkFramebufferStatus(gl.FRAMEBUFFER);

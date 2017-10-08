@@ -1,19 +1,21 @@
-import {initTexture, initFboTexture, bindFboTexture, updateTexture, loadTextureData, bindFboTextureToFragmentShader} from './texture-utils';
+import {initTexture, initFboTexture, bindFboTexture, updateTexture, loadTextureData, rebindFboTextures} from './texture-utils';
 import iterateObject from '../utils/iterate-object';
 
 export async function initUniforms(gl, program, uniformData, shaderName) {
     let result = {};
 
-
     for (let [uniformName, data] of iterateObject(uniformData)) {
-        console.log(`${shaderName}: INIT UNIFORM: ${uniformName}`);
-
         let uniform = gl.getUniformLocation(program, new String(uniformName));
         if (!uniform) {
-            console.warn(`hackGl: ${shaderName} ` +
+            console.warn(`hackGl: ${shaderName} shader ` +
                          `failed to get the storage location of "${uniformName}" - ignoring variable. ` +
                          'Perhaps you forgot to use it in your shader?');
-            continue;
+
+
+            // don't init uniform but init texture unit
+            if(data.type != 'fbo_t') {
+                continue;
+            }
         }
 
         let updatedData = {
@@ -30,10 +32,6 @@ export async function initUniforms(gl, program, uniformData, shaderName) {
 }
 
 export function updateUniforms(gl, uniforms, options) {
-    // if(typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
-    //     bindFboTextureToFragmentShader(gl, uniforms);
-    // }
-
     let result = {};
     for (let [key, data] of iterateObject(uniforms)) {
         let uniform = result[key] = {...data};
@@ -62,9 +60,6 @@ export async function setUniformValue(gl, data, updating = false) {
         // fbo texture sampler
         case 'fbo_t':
             if(!updating && !data.textureUnitNo) {
-                console.log("SET UNIFORM VALUE - INIT FBO TEXTURE!!!!!!!!!!!")
-                console.dir(data);
-
                 data = initFboTexture(gl, data);
             } else {
                 data = bindFboTexture(gl, data);

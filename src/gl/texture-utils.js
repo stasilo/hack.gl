@@ -17,8 +17,6 @@ export function initTexture(gl, data, image) {
 
     let texture = gl.createTexture();
 
-    console.log("INIT TEXTURE TO no: " + textureUnitNo);
-
     // activate texture
     gl.activeTexture(gl[`TEXTURE${textureUnitNo}`]);
 
@@ -87,11 +85,13 @@ export function initTexture(gl, data, image) {
 }
 
 export function initFboTexture(gl, data) {
-    console.log("INIT FBBBBOOOOO  TEXTURE TO no: " + textureUnitNo);
-
     gl.activeTexture(gl[`TEXTURE${textureUnitNo}`]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
-    gl.uniform1i(data.uniform, textureUnitNo);
+
+    if(data.uniform) {
+        gl.uniform1i(data.uniform, textureUnitNo);
+    }
+
     data.textureUnitNo = textureUnitNo;
     textureUnitNo++;
 
@@ -99,29 +99,18 @@ export function initFboTexture(gl, data) {
 }
 
 export function bindFboTexture(gl, data) {
-    console.log("BIND !!!! FBBBBOOOOO  TEXTURE TO no: " + data.textureUnitNo);
-
     gl.activeTexture(gl[`TEXTURE${data.textureUnitNo}`]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
-    // gl.bindTexture(gl.TEXTURE_2D, data.texture1);
-
     gl.uniform1i(data.uniform, data.textureUnitNo);
-    // textureUnitNo++;
-
     return data;
 }
 
-//FRAMFÖR ALLT DENNA - ANROPA NÄR SISTA SHADERN (FRAGMENT) RENDERAS
-export function bindFboTextureToFragmentShader(gl, uniforms) {
+export function rebindFboTextures(gl, uniforms) {
     let fboUniforms = Object.keys(uniforms).reduce((a, uniformName) => (
         uniformName.startsWith('u_fbo')
         ? [...a, uniforms[uniformName]]
         : a
     ), []);
-
-    // console.dir(uniforms);
-    // console.log('BIND FBO TEXTURE');
-    // console.dir(fboUniforms);
 
     fboUniforms.map(uniform => {
         gl.activeTexture(gl[`TEXTURE${uniform.textureUnitNo }`]);

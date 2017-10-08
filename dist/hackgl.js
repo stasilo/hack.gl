@@ -2607,15 +2607,10 @@ var initFramebuffer = exports.initFramebuffer = function () {
                     case 24:
                         fboUniforms = _context.sent;
 
-
-                        console.log("INITED FBO UNIFORMS: ");
-                        console.dir(fboUniforms);
-                        console.dir(fboUniforms[fboTextureName]);
-
                         renderToTexture = function renderToTexture() {
                             gl.useProgram(fboProgram);
 
-                            (0, _textureUtils.bindFboTextureToFragmentShader)(gl, fboUniforms);
+                            (0, _textureUtils.rebindFboTextures)(gl, fboUniforms);
                             fboUniforms = (0, _uniformUtils.updateUniforms)(gl, fboUniforms);
 
                             gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
@@ -2632,12 +2627,6 @@ var initFramebuffer = exports.initFramebuffer = function () {
                                 gl.activeTexture(gl['TEXTURE' + fboUniforms[fboTextureName].textureUnitNo]);
                                 gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
                                 gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
-
-                                // if(fboUniforms[fboTextureName]) {
-                                //     gl.activeTexture(gl[`TEXTURE${fboUniforms[fboTextureName].textureUnitNo}`]);
-                                //     gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
-                                //     gl.uniform1i(fboUniforms[fboTextureName].uniform, fboUniforms[fboTextureName].textureUnitNo);
-                                // }
                             }
 
                             // clear and draw
@@ -2646,19 +2635,16 @@ var initFramebuffer = exports.initFramebuffer = function () {
                             gl.drawArrays(gl.TRIANGLE_STRIP, 0, fboVertexCount);
 
                             gl.bindFramebuffer(gl.FRAMEBUFFER, null); // change the drawing destination to color buffer
-                            //////////
                             gl.bindTexture(gl.TEXTURE_2D, null);
-
                             // gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
                         };
 
                         return _context.abrupt('return', {
                             renderToTexture: renderToTexture,
                             fboUniform: fboUniforms[fboTextureName]
-                            // fboUniform: fboUniformData[fboTextureName],
                         });
 
-                    case 30:
+                    case 27:
                     case 'end':
                         return _context.stop();
                 }
@@ -2908,23 +2894,13 @@ exports.default = function () {
                     case 22:
                         fbo = _context.sent;
 
-                        // let fbo = await initFramebuffer(gl, fboSettings, `u_fbo${fboCount}`, options, {});
 
                         if (typeof fbo.fboUniform !== 'undefined') {
                             uniformData['u_fbo' + fboCount] = fbo.fboUniform;
-                            console.log("SAVING UNIFORM DATA FOR MAIN FRAG SHADER: ");
-                            console.dir(fbo.fboUniform);
-
                             _prevFboUniforms['u_fbo' + fboCount] = fbo.fboUniform;
                         }
 
-                        //console.log("ADDED FBO UNIFORM: ");
-                        //console.dir(fbo.fboUniform)
-
-                        // uniformData.u_fbo = fbo.fboUniform;
-
                         fbos.push(fbo);
-
                         fboCount++;
 
                     case 26:
@@ -2978,7 +2954,6 @@ exports.default = function () {
                         _fbo = _context.sent;
 
                         uniformData['u_fbo' + fboCount] = _fbo.fboUniform;
-
                         fbos.push(_fbo);
 
                     case 50:
@@ -3001,27 +2976,16 @@ exports.default = function () {
                     case 57:
                         uniforms = _context.sent;
 
-
-                        console.log("MAIN FRAGMENT UNIFORMS!!!");
-                        console.dir(uniforms);
-
                         _renderFragmentShader = function _renderFragmentShader() {
                             gl.useProgram(program);
 
-                            // bind all textures
-
-                            (0, _textureUtils.bindFboTextureToFragmentShader)(gl, uniforms);
+                            (0, _textureUtils.rebindFboTextures)(gl, uniforms);
                             uniforms = (0, _uniformUtils.updateUniforms)(gl, uniforms, options);
 
                             gl.viewport(0, 0, options.resolution.width, options.resolution.height); // set a viewport for FBO
                             gl.clear(gl.COLOR_BUFFER_BIT);
                             gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
                         };
-
-                        // console.log("UNIFORM DATA");
-                        // console.dir(uniformData);
-                        // console.dir(uniforms);
-                        // console.log("fbos.length: " + fbos.length);
 
                         // main render loop
 
@@ -3062,7 +3026,7 @@ exports.default = function () {
 
                         _render();
 
-                    case 63:
+                    case 61:
                     case 'end':
                         return _context.stop();
                 }
@@ -3178,7 +3142,7 @@ var loadTextureData = exports.loadTextureData = function () {
 exports.initTexture = initTexture;
 exports.initFboTexture = initFboTexture;
 exports.bindFboTexture = bindFboTexture;
-exports.bindFboTextureToFragmentShader = bindFboTextureToFragmentShader;
+exports.rebindFboTextures = rebindFboTextures;
 exports.updateTexture = updateTexture;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -3192,8 +3156,6 @@ function initTexture(gl, data, image) {
     }
 
     var texture = gl.createTexture();
-
-    console.log("INIT TEXTURE TO no: " + textureUnitNo);
 
     // activate texture
     gl.activeTexture(gl['TEXTURE' + textureUnitNo]);
@@ -3263,11 +3225,13 @@ function initTexture(gl, data, image) {
 }
 
 function initFboTexture(gl, data) {
-    console.log("INIT FBBBBOOOOO  TEXTURE TO no: " + textureUnitNo);
-
     gl.activeTexture(gl['TEXTURE' + textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
-    gl.uniform1i(data.uniform, textureUnitNo);
+
+    if (data.uniform) {
+        gl.uniform1i(data.uniform, textureUnitNo);
+    }
+
     data.textureUnitNo = textureUnitNo;
     textureUnitNo++;
 
@@ -3275,27 +3239,16 @@ function initFboTexture(gl, data) {
 }
 
 function bindFboTexture(gl, data) {
-    console.log("BIND !!!! FBBBBOOOOO  TEXTURE TO no: " + data.textureUnitNo);
-
     gl.activeTexture(gl['TEXTURE' + data.textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture2);
-    // gl.bindTexture(gl.TEXTURE_2D, data.texture1);
-
     gl.uniform1i(data.uniform, data.textureUnitNo);
-    // textureUnitNo++;
-
     return data;
 }
 
-//FRAMFÖR ALLT DENNA - ANROPA NÄR SISTA SHADERN (FRAGMENT) RENDERAS
-function bindFboTextureToFragmentShader(gl, uniforms) {
+function rebindFboTextures(gl, uniforms) {
     var fboUniforms = (0, _keys2.default)(uniforms).reduce(function (a, uniformName) {
         return uniformName.startsWith('u_fbo') ? [].concat((0, _toConsumableArray3.default)(a), [uniforms[uniformName]]) : a;
     }, []);
-
-    // console.dir(uniforms);
-    // console.log('BIND FBO TEXTURE');
-    // console.dir(fboUniforms);
 
     fboUniforms.map(function (uniform) {
         gl.activeTexture(gl['TEXTURE' + uniform.textureUnitNo]);
@@ -3364,9 +3317,6 @@ var initUniforms = exports.initUniforms = function () {
                         }
 
                         _step$value = (0, _slicedToArray3.default)(_step.value, 2), uniformName = _step$value[0], data = _step$value[1];
-
-                        console.log(shaderName + ': INIT UNIFORM: ' + uniformName);
-
                         uniform = gl.getUniformLocation(program, new String(uniformName));
 
                         if (uniform) {
@@ -3374,7 +3324,15 @@ var initUniforms = exports.initUniforms = function () {
                             break;
                         }
 
-                        console.warn('hackGl: ' + shaderName + ' ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
+                        console.warn('hackGl: ' + shaderName + ' shader ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
+
+                        // don't init uniform but init texture unit
+
+                        if (!(data.type != 'fbo_t')) {
+                            _context.next = 13;
+                            break;
+                        }
+
                         return _context.abrupt('continue', 18);
 
                     case 13:
@@ -3498,9 +3456,6 @@ var setUniformValue = exports.setUniformValue = function () {
 
                     case 17:
                         if (!updating && !data.textureUnitNo) {
-                            console.log("SET UNIFORM VALUE - INIT FBO TEXTURE!!!!!!!!!!!");
-                            console.dir(data);
-
                             data = (0, _textureUtils.initFboTexture)(gl, data);
                         } else {
                             data = (0, _textureUtils.bindFboTexture)(gl, data);
@@ -3554,10 +3509,6 @@ var _iterateObject2 = _interopRequireDefault(_iterateObject);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function updateUniforms(gl, uniforms, options) {
-    // if(typeof options !== 'undefined' && options.feedbackFbo && uniforms.u_fbo && uniforms.u_fbo.uniform) {
-    //     bindFboTextureToFragmentShader(gl, uniforms);
-    // }
-
     var result = {};
     var _iteratorNormalCompletion2 = true;
     var _didIteratorError2 = false;
@@ -3899,7 +3850,7 @@ module.exports = exports['default'];
 module.exports = "uniform sampler2D u_camera;\n";
 
 },{}],109:[function(_dereq_,module,exports){
-module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform sampler2D u_fbo2;\n";
+module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform sampler2D u_fbo2;\nuniform sampler2D u_fbo3;\nuniform sampler2D u_fbo4;\nuniform sampler2D u_fbo5;\nuniform sampler2D u_fbo6;\n";
 
 },{}],110:[function(_dereq_,module,exports){
 module.exports = "void main() {\n    vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n}\n";

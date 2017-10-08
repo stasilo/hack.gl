@@ -4,7 +4,7 @@ import {initUniforms, updateUniforms, setUniformValue} from './uniform-utils';
 import {initFramebuffer} from './init-fbo';
 import executeCallbackOrArray from '../utils/execute-callback-or-array';
 import {initCameraUniform} from '../webrtc/init-camera';
-import {bindFboTextureToFragmentShader} from './texture-utils';
+import {rebindFboTextures} from './texture-utils';
 
 import {defaultUniforms} from './default-uniforms';
 
@@ -42,29 +42,18 @@ export default async function initPixelToy(gl, options) {
 
             for(let fboSettings of options.feedbackFbo) {
                 let fbo = await initFramebuffer(gl, fboSettings, `u_fbo${fboCount}`, options, prevFboUniforms);
-                // let fbo = await initFramebuffer(gl, fboSettings, `u_fbo${fboCount}`, options, {});
 
                 if(typeof fbo.fboUniform !== 'undefined') {
                     uniformData[`u_fbo${fboCount}`] = fbo.fboUniform;
-                    console.log("SAVING UNIFORM DATA FOR MAIN FRAG SHADER: ");
-                    console.dir(fbo.fboUniform);
-
                     prevFboUniforms[`u_fbo${fboCount}`] = fbo.fboUniform;
                 }
 
-                //console.log("ADDED FBO UNIFORM: ");
-                //console.dir(fbo.fboUniform)
-
-                // uniformData.u_fbo = fbo.fboUniform;
-
                 fbos.push(fbo);
-
                 fboCount++;
             }
         } else {
             let fbo = await initFramebuffer(gl, options.feedbackFbo, `u_fbo${fboCount}`, options);
             uniformData[`u_fbo${fboCount}`] = fbo.fboUniform;
-
             fbos.push(fbo);
         }
     }
@@ -78,26 +67,16 @@ export default async function initPixelToy(gl, options) {
     let vertexCount = initVertexBuffers(gl, program, options);
     let uniforms = await initUniforms(gl, program, uniformData, 'main fragment');
 
-    console.log("MAIN FRAGMENT UNIFORMS!!!");
-    console.dir(uniforms);
-
     let _renderFragmentShader = () => {
         gl.useProgram(program);
 
-        // bind all textures
-
-        bindFboTextureToFragmentShader(gl, uniforms);
+        rebindFboTextures(gl, uniforms);
         uniforms = updateUniforms(gl, uniforms, options);
 
         gl.viewport(0, 0, options.resolution.width, options.resolution.height); // set a viewport for FBO
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexCount);
     }
-
-    // console.log("UNIFORM DATA");
-    // console.dir(uniformData);
-    // console.dir(uniforms);
-    // console.log("fbos.length: " + fbos.length);
 
     // main render loop
     let _render = () => {
