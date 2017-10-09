@@ -112,7 +112,7 @@ export function rebindFboTextures(gl, uniforms) {
         : a
     ), []);
 
-    fboUniforms.map(uniform => {
+    fboUniforms.forEach(uniform => {
         gl.activeTexture(gl[`TEXTURE${uniform.textureUnitNo }`]);
         gl.bindTexture(gl.TEXTURE_2D, uniform.texture2);
         gl.uniform1i(uniform.uniform, uniform.textureUnitNo);

@@ -3249,7 +3249,7 @@ function rebindFboTextures(gl, uniforms) {
         return uniformName.startsWith('u_fbo') ? [].concat((0, _toConsumableArray3.default)(a), [uniforms[uniformName]]) : a;
     }, []);
 
-    fboUniforms.map(function (uniform) {
+    fboUniforms.forEach(function (uniform) {
         gl.activeTexture(gl['TEXTURE' + uniform.textureUnitNo]);
         gl.bindTexture(gl.TEXTURE_2D, uniform.texture2);
         gl.uniform1i(uniform.uniform, uniform.textureUnitNo);
@@ -3869,7 +3869,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = executeCallbackOrArray;
 function executeCallbackOrArray(callback) {
     if (Array.isArray(callback)) {
-        callback.map(function (cb) {
+        callback.forEach(function (cb) {
             return cb();
         });
     } else if (typeof callback === 'function') {
