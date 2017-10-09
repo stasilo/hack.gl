@@ -65,9 +65,8 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
 
-        // ping pong?
+        // uniform location exists, which means fbo texture accessed in shader => ping pong texture to enable feedback
         if(fboUniforms[fboTextureName]) {
-            // ping pong texture
             let tmp = fbo.texture2;
             fbo.texture2 = fbo.texture1;
             fbo.texture1 = tmp;
@@ -178,7 +177,7 @@ function _initFramebufferObject(gl, fboSettings, options) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
 
-    // check if FBO is configured correctly
+    // check if fbo is configured correctly
     let e = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (gl.FRAMEBUFFER_COMPLETE !== e) {
         throw `frame buffer object is incomplete: ${e.toString()}`;

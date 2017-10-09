@@ -2615,9 +2615,8 @@ var initFramebuffer = exports.initFramebuffer = function () {
 
                             gl.bindFramebuffer(gl.FRAMEBUFFER, fbo); // change the drawing destination to FBO
 
-                            // ping pong?
+                            // uniform location exists, which means fbo texture accessed in shader => ping pong texture to enable feedback
                             if (fboUniforms[fboTextureName]) {
-                                // ping pong texture
                                 var tmp = fbo.texture2;
                                 fbo.texture2 = fbo.texture1;
                                 fbo.texture1 = tmp;
@@ -2765,7 +2764,7 @@ function _initFramebufferObject(gl, fboSettings, options) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture1, 0);
     gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
 
-    // check if FBO is configured correctly
+    // check if fbo is configured correctly
     var e = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
     if (gl.FRAMEBUFFER_COMPLETE !== e) {
         throw 'frame buffer object is incomplete: ' + e.toString();
@@ -2897,7 +2896,7 @@ exports.default = function () {
 
                         if (typeof fbo.fboUniform !== 'undefined') {
                             uniformData['u_fbo' + fboCount] = fbo.fboUniform;
-                            _prevFboUniforms['u_fbo' + fboCount] = fbo.fboUniform;
+                            _prevFboUniforms['u_fbo' + fboCount] = fbo.fboUniform; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
                         }
 
                         fbos.push(fbo);
@@ -3326,7 +3325,7 @@ var initUniforms = exports.initUniforms = function () {
 
                         console.warn('hackGl: ' + shaderName + ' shader ' + ('failed to get the storage location of "' + uniformName + '" - ignoring variable. ') + 'Perhaps you forgot to use it in your shader?');
 
-                        // don't init uniform but init texture unit
+                        // don't init uniform, but still init texture unit for the fbo rendering
 
                         if (!(data.type != 'fbo_t')) {
                             _context.next = 13;

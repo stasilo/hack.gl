@@ -45,7 +45,7 @@ export default async function initPixelToy(gl, options) {
 
                 if(typeof fbo.fboUniform !== 'undefined') {
                     uniformData[`u_fbo${fboCount}`] = fbo.fboUniform;
-                    prevFboUniforms[`u_fbo${fboCount}`] = fbo.fboUniform;
+                    prevFboUniforms[`u_fbo${fboCount}`] = fbo.fboUniform; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
                 }
 
                 fbos.push(fbo);

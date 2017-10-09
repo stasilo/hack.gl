@@ -11,8 +11,7 @@ export async function initUniforms(gl, program, uniformData, shaderName) {
                          `failed to get the storage location of "${uniformName}" - ignoring variable. ` +
                          'Perhaps you forgot to use it in your shader?');
 
-
-            // don't init uniform but init texture unit
+            // don't init uniform, but still init texture unit for the fbo rendering
             if(data.type != 'fbo_t') {
                 continue;
             }
