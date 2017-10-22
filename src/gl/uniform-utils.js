@@ -5,6 +5,8 @@ export async function initUniforms(gl, program, uniformData, shaderName) {
     let result = {};
 
     for (let [uniformName, data] of iterateObject(uniformData)) {
+        console.log("processing " + uniformName);
+        
         let uniform = gl.getUniformLocation(program, new String(uniformName));
         if (!uniform) {
             console.warn(`hackGl: ${shaderName} shader ` +
@@ -66,22 +68,27 @@ export async function setUniformValue(gl, data, updating = false) {
 
             break;
 
+        // integer
+        case 'i':
+            gl.uniform1i(data.uniform, data.value);
+            break;
+
         // float
         case 'f':
             gl.uniform1f(data.uniform, data.value);
             break;
 
-        // vec2
+        // float vec2
         case '2fv':
             gl.uniform2fv(data.uniform, data.value);
             break;
 
-        // vec3
+        // float vec3
         case '3fv':
             gl.uniform3fv(data.uniform, data.value);
             break;
 
-        // vec4
+        // float vec4
         case '4fv':
             gl.uniform4fv(data.uniform, data.value);
             break;

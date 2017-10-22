@@ -6,6 +6,7 @@ let position = {
 
 export default function getMousePosition(canvas) {
     if(!handler) {
+        canvas = typeof canvas === 'undefined' ? document.getElementsByTagName('canvas')[0] : canvas;
         handler = canvas.onmousemove = e => {
             position = {
                 x: (e.pageX - canvas.offsetLeft) / canvas.width,

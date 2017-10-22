@@ -20,7 +20,7 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
     let fboUniformData = {
         ...defaultUniforms,
         ...fboSettings.uniforms,
-        ...prevFboUniforms
+        //...prevFboUniforms
     };
 
     fboUniformData.u_resolution.value = [
@@ -91,6 +91,18 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
     return {
         renderToTexture,
         fboUniform: fboUniforms[fboTextureName],
+        addUniforms: async (uniformData) =>  {
+            console.log('adding extra uniforms for: ' + fboTextureName);
+            
+            gl.useProgram(fboProgram);
+            fboUniforms = {
+                ...fboUniforms,
+                ...(await initUniforms(gl, fboProgram, uniformData, fboTextureName))
+            }
+
+            console.log("NEW FRESH UNIFORMS: ");
+            console.dir(fboUniforms);
+        }
     }
 }
 

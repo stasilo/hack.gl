@@ -2493,6 +2493,8 @@ var _getMousePosition = _dereq_('../utils/get-mouse-position');
 
 var _getMousePosition2 = _interopRequireDefault(_getMousePosition);
 
+var _frameCount = _dereq_('../utils/frame-count');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var startTime = Date.now();
@@ -2506,7 +2508,7 @@ var defaultUniforms = exports.defaultUniforms = {
         type: '2fv',
         value: [0.0, 0.0],
         update: function update() {
-            return (0, _getMousePosition2.default)(options.canvas);
+            return (0, _getMousePosition2.default)();
         }
     },
     u_time: {
@@ -2515,10 +2517,15 @@ var defaultUniforms = exports.defaultUniforms = {
         update: function update() {
             return (Date.now() - startTime) / 1200;
         }
+    },
+    u_frame_count: {
+        type: 'i',
+        value: (0, _frameCount.getFrameCount)(),
+        update: _frameCount.getFrameCount
     }
 };
 
-},{"../utils/get-mouse-position":114}],100:[function(_dereq_,module,exports){
+},{"../utils/frame-count":114,"../utils/get-mouse-position":115}],100:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2539,45 +2546,47 @@ var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
 var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var initFramebuffer = exports.initFramebuffer = function () {
-    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, fboSettings, fboTextureName, options, prevFboUniforms) {
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(gl, fboSettings, fboTextureName, options, prevFboUniforms) {
+        var _this = this;
+
         var fboShader, fboUniformData, fbo, fboProgram, fboVertexCount, fboUniforms, renderToTexture;
-        return _regenerator2.default.wrap(function _callee$(_context) {
+        return _regenerator2.default.wrap(function _callee2$(_context2) {
             while (1) {
-                switch (_context.prev = _context.next) {
+                switch (_context2.prev = _context2.next) {
                     case 0:
                         fboShader = toyFragmentHeader + '\n                     ' + (fboSettings.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                     ' + (fboSettings ? fboFragmentHeader : '') + '\n                     ' + fboSettings.fragmentShader;
-                        fboUniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, fboSettings.uniforms, prevFboUniforms);
+                        fboUniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, fboSettings.uniforms);
 
 
                         fboUniformData.u_resolution.value = [options.resolution.width, options.resolution.height];
 
                         if (!fboSettings.injectWebcamUniform) {
-                            _context.next = 7;
+                            _context2.next = 7;
                             break;
                         }
 
-                        _context.next = 6;
+                        _context2.next = 6;
                         return (0, _initCamera.initCameraUniform)();
 
                     case 6:
-                        fboUniformData.u_camera = _context.sent;
+                        fboUniformData.u_camera = _context2.sent;
 
                     case 7:
 
                         // initialize framebuffer object (FBO)
                         fbo = void 0;
-                        _context.prev = 8;
+                        _context2.prev = 8;
 
                         fbo = _initFramebufferObject(gl, fboSettings, options);
-                        _context.next = 16;
+                        _context2.next = 16;
                         break;
 
                     case 12:
-                        _context.prev = 12;
-                        _context.t0 = _context['catch'](8);
+                        _context2.prev = 12;
+                        _context2.t0 = _context2['catch'](8);
 
-                        console.error('hackGl: ' + _context.t0);
-                        return _context.abrupt('return');
+                        console.error('hackGl: ' + _context2.t0);
+                        return _context2.abrupt('return');
 
                     case 16:
 
@@ -2590,7 +2599,7 @@ var initFramebuffer = exports.initFramebuffer = function () {
                         fboProgram = (0, _createGlProgram2.default)(gl, toyVertexShader, fboShader);
 
                         if (fboProgram) {
-                            _context.next = 20;
+                            _context2.next = 20;
                             break;
                         }
 
@@ -2601,11 +2610,11 @@ var initFramebuffer = exports.initFramebuffer = function () {
                         gl.useProgram(fboProgram);
 
                         fboVertexCount = (0, _initVertexBuffers2.default)(gl, fboProgram);
-                        _context.next = 24;
+                        _context2.next = 24;
                         return (0, _uniformUtils.initUniforms)(gl, fboProgram, fboUniformData, fboTextureName);
 
                     case 24:
-                        fboUniforms = _context.sent;
+                        fboUniforms = _context2.sent;
 
                         renderToTexture = function renderToTexture() {
                             gl.useProgram(fboProgram);
@@ -2638,17 +2647,52 @@ var initFramebuffer = exports.initFramebuffer = function () {
                             // gl.bindTexture(gl.TEXTURE_2D, fbo.texture2);
                         };
 
-                        return _context.abrupt('return', {
+                        return _context2.abrupt('return', {
                             renderToTexture: renderToTexture,
-                            fboUniform: fboUniforms[fboTextureName]
+                            fboUniform: fboUniforms[fboTextureName],
+                            addUniforms: function () {
+                                var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(uniformData) {
+                                    return _regenerator2.default.wrap(function _callee$(_context) {
+                                        while (1) {
+                                            switch (_context.prev = _context.next) {
+                                                case 0:
+                                                    console.log('adding extra uniforms for: ' + fboTextureName);
+
+                                                    gl.useProgram(fboProgram);
+                                                    _context.t0 = _extends3.default;
+                                                    _context.t1 = {};
+                                                    _context.t2 = fboUniforms;
+                                                    _context.next = 7;
+                                                    return (0, _uniformUtils.initUniforms)(gl, fboProgram, uniformData, fboTextureName);
+
+                                                case 7:
+                                                    _context.t3 = _context.sent;
+                                                    fboUniforms = (0, _context.t0)(_context.t1, _context.t2, _context.t3);
+
+
+                                                    console.log("NEW FRESH UNIFORMS: ");
+                                                    console.dir(fboUniforms);
+
+                                                case 11:
+                                                case 'end':
+                                                    return _context.stop();
+                                            }
+                                        }
+                                    }, _callee, _this);
+                                }));
+
+                                return function addUniforms(_x6) {
+                                    return _ref2.apply(this, arguments);
+                                };
+                            }()
                         });
 
                     case 27:
                     case 'end':
-                        return _context.stop();
+                        return _context2.stop();
                 }
             }
-        }, _callee, this, [[8, 12]]);
+        }, _callee2, this, [[8, 12]]);
     }));
 
     return function initFramebuffer(_x, _x2, _x3, _x4, _x5) {
@@ -2779,7 +2823,7 @@ function _initFramebufferObject(gl, fboSettings, options) {
     return framebuffer;
 }
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],101:[function(_dereq_,module,exports){
+},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../webrtc/init-camera":117,"./create-gl-program":98,"./default-uniforms":99,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],101:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2818,6 +2862,8 @@ var _executeCallbackOrArray = _dereq_('../utils/execute-callback-or-array');
 
 var _executeCallbackOrArray2 = _interopRequireDefault(_executeCallbackOrArray);
 
+var _frameCount = _dereq_('../utils/frame-count');
+
 var _initCamera = _dereq_('../webrtc/init-camera');
 
 var _textureUtils = _dereq_('./texture-utils');
@@ -2834,7 +2880,7 @@ var defaultFragmentShader = _dereq_('../shaders/pixeltoy/default-fragmentshader.
 
 exports.default = function () {
     var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, options) {
-        var uniformData, fragmentShader, fbos, prevFboUniforms, fboCount, _prevFboUniforms, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, fboSettings, fbo, _fbo, program, vertexCount, uniforms, _renderFragmentShader, _render;
+        var uniformData, fragmentShader, fbos, fboUniforms, fboCount, _fboUniforms, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, fboSettings, fbo, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, _fbo, _fbo2, program, vertexCount, uniforms, _renderFragmentShader, _render;
 
         return _regenerator2.default.wrap(function _callee$(_context) {
             while (1) {
@@ -2859,21 +2905,21 @@ exports.default = function () {
 
                     case 7:
                         fbos = [];
-                        prevFboUniforms = {};
+                        fboUniforms = {};
 
                         if (!options.feedbackFbo) {
-                            _context.next = 50;
+                            _context.next = 78;
                             break;
                         }
 
                         fboCount = 0;
 
                         if (!options.feedbackFbo.length) {
-                            _context.next = 45;
+                            _context.next = 73;
                             break;
                         }
 
-                        _prevFboUniforms = {};
+                        _fboUniforms = {};
                         _iteratorNormalCompletion = true;
                         _didIteratorError = false;
                         _iteratorError = undefined;
@@ -2888,7 +2934,7 @@ exports.default = function () {
 
                         fboSettings = _step.value;
                         _context.next = 22;
-                        return (0, _initFbo.initFramebuffer)(gl, fboSettings, 'u_fbo' + fboCount, options, _prevFboUniforms);
+                        return (0, _initFbo.initFramebuffer)(gl, fboSettings, 'u_fbo' + fboCount, options, _fboUniforms);
 
                     case 22:
                         fbo = _context.sent;
@@ -2896,7 +2942,15 @@ exports.default = function () {
 
                         if (typeof fbo.fboUniform !== 'undefined') {
                             uniformData['u_fbo' + fboCount] = fbo.fboUniform;
-                            _prevFboUniforms['u_fbo' + fboCount] = fbo.fboUniform; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
+                            _fboUniforms['u_fbo' + fboCount] = fbo.fboUniform; // save fbo uniform data
+
+                            // fboUniforms[`u_fbo${fboCount}`] = {
+                            //     // ...fbo.fboUniform
+                            //     texture1: fbo.fboUniform.texture1,
+                            //     texture2: fbo.fboUniform.texture2,
+                            //     textureUnitNo: fbo.fboUniform.textureUnitNo,
+                            //     type: fbo.fboUniform.type
+                            // }; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
                         }
 
                         fbos.push(fbo);
@@ -2942,37 +2996,98 @@ exports.default = function () {
                         return _context.finish(35);
 
                     case 43:
+
+                        console.log("PREV FBO UNIS:");
+                        console.dir(_fboUniforms);
+
+                        // add all fbo textures to all fbos (=> fbo0 can access fbo3 and fbo3 can access fb01 and so on...)
+                        _iteratorNormalCompletion2 = true;
+                        _didIteratorError2 = false;
+                        _iteratorError2 = undefined;
+                        _context.prev = 48;
+                        _iterator2 = (0, _getIterator3.default)(fbos);
+
+                    case 50:
+                        if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
+                            _context.next = 57;
+                            break;
+                        }
+
+                        _fbo = _step2.value;
+                        _context.next = 54;
+                        return _fbo.addUniforms(_fboUniforms);
+
+                    case 54:
+                        _iteratorNormalCompletion2 = true;
                         _context.next = 50;
                         break;
 
-                    case 45:
-                        _context.next = 47;
+                    case 57:
+                        _context.next = 63;
+                        break;
+
+                    case 59:
+                        _context.prev = 59;
+                        _context.t1 = _context['catch'](48);
+                        _didIteratorError2 = true;
+                        _iteratorError2 = _context.t1;
+
+                    case 63:
+                        _context.prev = 63;
+                        _context.prev = 64;
+
+                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                            _iterator2.return();
+                        }
+
+                    case 66:
+                        _context.prev = 66;
+
+                        if (!_didIteratorError2) {
+                            _context.next = 69;
+                            break;
+                        }
+
+                        throw _iteratorError2;
+
+                    case 69:
+                        return _context.finish(66);
+
+                    case 70:
+                        return _context.finish(63);
+
+                    case 71:
+                        _context.next = 78;
+                        break;
+
+                    case 73:
+                        _context.next = 75;
                         return (0, _initFbo.initFramebuffer)(gl, options.feedbackFbo, 'u_fbo' + fboCount, options);
 
-                    case 47:
-                        _fbo = _context.sent;
+                    case 75:
+                        _fbo2 = _context.sent;
 
-                        uniformData['u_fbo' + fboCount] = _fbo.fboUniform;
-                        fbos.push(_fbo);
+                        uniformData['u_fbo' + fboCount] = _fbo2.fboUniform;
+                        fbos.push(_fbo2);
 
-                    case 50:
+                    case 78:
                         program = (0, _createGlProgram2.default)(gl, toyVertexShader, fragmentShader);
 
                         if (program) {
-                            _context.next = 53;
+                            _context.next = 81;
                             break;
                         }
 
                         throw 'hack.Gl: failed to create main gl program!';
 
-                    case 53:
+                    case 81:
 
                         gl.useProgram(program);
                         vertexCount = (0, _initVertexBuffers2.default)(gl, program, options);
-                        _context.next = 57;
+                        _context.next = 85;
                         return (0, _uniformUtils.initUniforms)(gl, program, uniformData, 'main fragment');
 
-                    case 57:
+                    case 85:
                         uniforms = _context.sent;
 
                         _renderFragmentShader = function _renderFragmentShader() {
@@ -2991,27 +3106,27 @@ exports.default = function () {
 
                         _render = function _render() {
                             if (fbos.length) {
-                                var _iteratorNormalCompletion2 = true;
-                                var _didIteratorError2 = false;
-                                var _iteratorError2 = undefined;
+                                var _iteratorNormalCompletion3 = true;
+                                var _didIteratorError3 = false;
+                                var _iteratorError3 = undefined;
 
                                 try {
-                                    for (var _iterator2 = (0, _getIterator3.default)(fbos), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                        var _fbo2 = _step2.value;
+                                    for (var _iterator3 = (0, _getIterator3.default)(fbos), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                                        var _fbo3 = _step3.value;
 
-                                        _fbo2.renderToTexture();
+                                        _fbo3.renderToTexture();
                                     }
                                 } catch (err) {
-                                    _didIteratorError2 = true;
-                                    _iteratorError2 = err;
+                                    _didIteratorError3 = true;
+                                    _iteratorError3 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                            _iterator2.return();
+                                        if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                            _iterator3.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError2) {
-                                            throw _iteratorError2;
+                                        if (_didIteratorError3) {
+                                            throw _iteratorError3;
                                         }
                                     }
                                 }
@@ -3020,17 +3135,18 @@ exports.default = function () {
                             _renderFragmentShader();
 
                             (0, _executeCallbackOrArray2.default)(options.onRender);
+                            (0, _frameCount.updateFrameCount)();
                             requestAnimationFrame(_render);
                         };
 
                         _render();
 
-                    case 61:
+                    case 89:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[16, 31, 35, 43], [36,, 38, 42]]);
+        }, _callee, this, [[16, 31, 35, 43], [36,, 38, 42], [48, 59, 63, 71], [64,, 66, 70]]);
     }));
 
     function initPixelToy(_x, _x2) {
@@ -3042,7 +3158,7 @@ exports.default = function () {
 
 module.exports = exports['default'];
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../utils/execute-callback-or-array":113,"../webrtc/init-camera":116,"./create-gl-program":98,"./default-uniforms":99,"./init-fbo":100,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
+},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../utils/execute-callback-or-array":113,"../utils/frame-count":114,"../webrtc/init-camera":117,"./create-gl-program":98,"./default-uniforms":99,"./init-fbo":100,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3311,15 +3427,18 @@ var initUniforms = exports.initUniforms = function () {
 
                     case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 21;
+                            _context.next = 22;
                             break;
                         }
 
                         _step$value = (0, _slicedToArray3.default)(_step.value, 2), uniformName = _step$value[0], data = _step$value[1];
+
+                        console.log("processing " + uniformName);
+
                         uniform = gl.getUniformLocation(program, new String(uniformName));
 
                         if (uniform) {
-                            _context.next = 13;
+                            _context.next = 14;
                             break;
                         }
 
@@ -3328,75 +3447,75 @@ var initUniforms = exports.initUniforms = function () {
                         // don't init uniform, but still init texture unit for the fbo rendering
 
                         if (!(data.type != 'fbo_t')) {
-                            _context.next = 13;
+                            _context.next = 14;
                             break;
                         }
 
-                        return _context.abrupt('continue', 18);
+                        return _context.abrupt('continue', 19);
 
-                    case 13:
+                    case 14:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
                         // await needed for texture image data loading
 
-                        _context.next = 16;
+                        _context.next = 17;
                         return setUniformValue(gl, updatedData);
 
-                    case 16:
+                    case 17:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 18:
+                    case 19:
                         _iteratorNormalCompletion = true;
                         _context.next = 6;
                         break;
 
-                    case 21:
-                        _context.next = 27;
+                    case 22:
+                        _context.next = 28;
                         break;
 
-                    case 23:
-                        _context.prev = 23;
+                    case 24:
+                        _context.prev = 24;
                         _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 27:
-                        _context.prev = 27;
+                    case 28:
                         _context.prev = 28;
+                        _context.prev = 29;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 30:
-                        _context.prev = 30;
+                    case 31:
+                        _context.prev = 31;
 
                         if (!_didIteratorError) {
-                            _context.next = 33;
+                            _context.next = 34;
                             break;
                         }
 
                         throw _iteratorError;
 
-                    case 33:
-                        return _context.finish(30);
-
                     case 34:
-                        return _context.finish(27);
+                        return _context.finish(31);
 
                     case 35:
-                        return _context.abrupt('return', result);
+                        return _context.finish(28);
 
                     case 36:
+                        return _context.abrupt('return', result);
+
+                    case 37:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[4, 23, 27, 35], [28,, 30, 34]]);
+        }, _callee, this, [[4, 24, 28, 36], [29,, 31, 35]]);
     }));
 
     return function initUniforms(_x, _x2, _x3, _x4) {
@@ -3413,7 +3532,7 @@ var setUniformValue = exports.setUniformValue = function () {
                 switch (_context2.prev = _context2.next) {
                     case 0:
                         _context2.t0 = data.type;
-                        _context2.next = _context2.t0 === 't' ? 3 : _context2.t0 === 'fbo_t' ? 17 : _context2.t0 === 'f' ? 19 : _context2.t0 === '2fv' ? 21 : _context2.t0 === '3fv' ? 23 : _context2.t0 === '4fv' ? 25 : 27;
+                        _context2.next = _context2.t0 === 't' ? 3 : _context2.t0 === 'fbo_t' ? 17 : _context2.t0 === 'i' ? 19 : _context2.t0 === 'f' ? 21 : _context2.t0 === '2fv' ? 23 : _context2.t0 === '3fv' ? 25 : _context2.t0 === '4fv' ? 27 : 29;
                         break;
 
                     case 3:
@@ -3451,7 +3570,7 @@ var setUniformValue = exports.setUniformValue = function () {
                         }
 
                     case 16:
-                        return _context2.abrupt('break', 29);
+                        return _context2.abrupt('break', 31);
 
                     case 17:
                         if (!updating && !data.textureUnitNo) {
@@ -3460,31 +3579,35 @@ var setUniformValue = exports.setUniformValue = function () {
                             data = (0, _textureUtils.bindFboTexture)(gl, data);
                         }
 
-                        return _context2.abrupt('break', 29);
+                        return _context2.abrupt('break', 31);
 
                     case 19:
-                        gl.uniform1f(data.uniform, data.value);
-                        return _context2.abrupt('break', 29);
+                        gl.uniform1i(data.uniform, data.value);
+                        return _context2.abrupt('break', 31);
 
                     case 21:
-                        gl.uniform2fv(data.uniform, data.value);
-                        return _context2.abrupt('break', 29);
+                        gl.uniform1f(data.uniform, data.value);
+                        return _context2.abrupt('break', 31);
 
                     case 23:
-                        gl.uniform3fv(data.uniform, data.value);
-                        return _context2.abrupt('break', 29);
+                        gl.uniform2fv(data.uniform, data.value);
+                        return _context2.abrupt('break', 31);
 
                     case 25:
-                        gl.uniform4fv(data.uniform, data.value);
-                        return _context2.abrupt('break', 29);
+                        gl.uniform3fv(data.uniform, data.value);
+                        return _context2.abrupt('break', 31);
 
                     case 27:
-                        throw ': ' + data.type + ' uniform not yet implemented!';
+                        gl.uniform4fv(data.uniform, data.value);
+                        return _context2.abrupt('break', 31);
 
                     case 29:
+                        throw ': ' + data.type + ' uniform not yet implemented!';
+
+                    case 31:
                         return _context2.abrupt('return', data);
 
-                    case 30:
+                    case 32:
                     case 'end':
                         return _context2.stop();
                 }
@@ -3543,7 +3666,7 @@ function updateUniforms(gl, uniforms, options) {
     return result;
 }
 
-},{"../utils/iterate-object":115,"./texture-utils":103,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/helpers/slicedToArray":9,"babel-runtime/regenerator":11}],105:[function(_dereq_,module,exports){
+},{"../utils/iterate-object":116,"./texture-utils":103,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/helpers/slicedToArray":9,"babel-runtime/regenerator":11}],105:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3855,7 +3978,7 @@ module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform 
 module.exports = "void main() {\n    vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n}\n";
 
 },{}],111:[function(_dereq_,module,exports){
-module.exports = "#ifdef GL_ES\n    precision mediump float;\n#endif\n\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\n";
+module.exports = "#ifdef GL_ES\n    precision mediump float;\n#endif\n\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\nuniform int u_frame_count;\n";
 
 },{}],112:[function(_dereq_,module,exports){
 module.exports = "attribute vec4 a_position;\n\nvoid main() {\n    gl_Position = a_position;\n}\n";
@@ -3886,6 +4009,30 @@ module.exports = exports['default'];
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.getFrameCount = getFrameCount;
+exports.updateFrameCount = updateFrameCount;
+exports.setFrameCount = setFrameCount;
+var frameCount = 0;
+
+function getFrameCount() {
+    return frameCount;
+}
+
+function updateFrameCount() {
+    return ++frameCount;
+}
+
+function setFrameCount(val) {
+    frameCount = val;
+    return val;
+}
+
+},{}],115:[function(_dereq_,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 exports.default = getMousePosition;
 var handler = null;
 var position = {
@@ -3895,6 +4042,7 @@ var position = {
 
 function getMousePosition(canvas) {
     if (!handler) {
+        canvas = typeof canvas === 'undefined' ? document.getElementsByTagName('canvas')[0] : canvas;
         handler = canvas.onmousemove = function (e) {
             position = {
                 x: (e.pageX - canvas.offsetLeft) / canvas.width,
@@ -3905,9 +4053,9 @@ function getMousePosition(canvas) {
 
     return [position.x, position.y];
 }
-module.exports = exports["default"];
+module.exports = exports['default'];
 
-},{}],115:[function(_dereq_,module,exports){
+},{}],116:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -4004,7 +4152,7 @@ function iterateObject(obj) {
 }
 module.exports = exports["default"];
 
-},{"babel-runtime/core-js/get-iterator":2,"babel-runtime/core-js/object/keys":5,"babel-runtime/regenerator":11}],116:[function(_dereq_,module,exports){
+},{"babel-runtime/core-js/get-iterator":2,"babel-runtime/core-js/object/keys":5,"babel-runtime/regenerator":11}],117:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {

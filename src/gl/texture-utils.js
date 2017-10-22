@@ -74,7 +74,6 @@ export function initTexture(gl, data, image) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
 
-
     // set the texture unit number to the sampler
     gl.uniform1i(data.uniform, textureUnitNo);
     data.textureUnitNo = textureUnitNo;

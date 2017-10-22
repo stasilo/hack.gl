@@ -52,16 +52,17 @@
                         gl_FragColor = sum; // => fbo0
                     }
                 `
-            },
-            {
+            }, {
                 uniforms: {
-                    u_texture1: {
+                    u_texture2: {
                         type: 't',
                         value: null,
                         url: 'assets/slime.png'
                     }
                 },
                 fragmentShader: `
+                    uniform sampler2D u_texture2;
+
                     void main() {
                         vec2 uv = gl_FragCoord.xy / u_resolution.xy;
                         vec2 tc = uv;
@@ -73,7 +74,6 @@
                         vec4 sum = texture2D(u_fbo0, tc);
 
                         sum.rgb = mix(sum.rbg, src.rgb, 0.95);
-
                         gl_FragColor = sum; // => fbo1
                     }
                 `
