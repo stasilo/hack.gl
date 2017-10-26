@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>hack.gl</title>
+  </head>
+  <body>
+    <canvas id="webgl" style="display:block;margin:0 auto;">
+        Please use a browser that supports canvas and webgl
+    </canvas>
+    <script src="../dist/hackgl.js"></script>
+    <script>
+        let canvas = document.getElementById('webgl');
+
+        hackgl({
+            canvas,
+            resolution: {
+                width: 800,
+                height: 400
+            },
+            audioAnalyser: {
+                url: 'assets/test.mp3',
+                fftSize: 1024,
+                smoothing: 0.3
+            },
+            fragmentShader: `
+                void main()
+                {
+                    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                    float color;
+
+                    if (uv.y > 0.5){
+                        color = hackgl_getAudioFreqData(uv.x);
+                    } else {
+                        color = hackgl_getLogAudioFreqData(uv.x, 0.3, 0.7);
+                    }
+
+                    //boost contrast
+                    color = pow(color, 3.0);
+                    //boost gain / brightness
+                    color *= 2.5;
+
+                    color = clamp(color, 0.0, 1.0);
+                    gl_FragColor = vec4(vec3(color), 1.0);
+                }
+            `,
+        });
+    </script>
+  </body>
+</html>

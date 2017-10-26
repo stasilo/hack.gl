@@ -1,8 +1,9 @@
+// require('babel-polyfill');
+import 'whatwg-fetch';
+
 import webGlUtils from './lib/webgl-utils';
 import initPixelToy from './gl/init-pixel-toy';
 import validateOptions from './init/options';
-
-// require('babel-polyfill');
 
 export default function hackGl(options) {
     options = validateOptions(options);
@@ -12,6 +13,9 @@ export default function hackGl(options) {
 
     _setupCanvasResolution(options);
     let gl = _getWebGlContext(options.canvas);
+
+    // var float_texture_ext = gl.getExtension('OES_texture_float');
+    // console.log("Float texture extension: " + float_texture_ext);
 
     // specify the color for clearing canvas
     gl.clearColor(...options.clearColor);

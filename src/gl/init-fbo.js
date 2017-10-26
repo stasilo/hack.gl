@@ -2,10 +2,12 @@ import createGlProgram from './create-gl-program';
 import initVertexBuffers from './init-vertex-buffers';
 import {initUniforms, updateUniforms, setUniformValue} from './uniform-utils';
 import {initCameraUniform} from '../webrtc/init-camera';
+import {initAudioAnalyserUniform} from '../utils/audio-analyser';
 import {defaultUniforms} from './default-uniforms';
 import {rebindFboTextures} from './texture-utils';
 
 const toyFragmentHeader = require('../shaders/pixeltoy/fragment-header.glsl');
+const audioFragmentHeader = require('../shaders/audio-fragment-header.glsl');
 const cameraFragmentHeader = require('../shaders/camera-fragment-header.glsl');
 const fboFragmentHeader = require('../shaders/fbo-fragment-header.glsl');
 const toyVertexShader = require('../shaders/pixeltoy/vertex-shader.glsl');
@@ -14,6 +16,7 @@ const defaultFragmentShader = require('../shaders/pixeltoy/default-fragmentshade
 export async function initFramebuffer(gl, fboSettings, fboTextureName, options, prevFboUniforms) {
     let fboShader = `${toyFragmentHeader}
                      ${(fboSettings.injectWebcamUniform ? cameraFragmentHeader : '')}
+                     ${(fboSettings.audioAnalyser ? audioFragmentHeader : '')}
                      ${(fboSettings ? fboFragmentHeader : '')}
                      ${(fboSettings.fragmentShader)}`;
 
@@ -30,6 +33,10 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
 
     if(fboSettings.injectWebcamUniform) {
         fboUniformData.u_camera = await initCameraUniform();
+    }
+
+    if(fboSettings.audioAnalyser) {
+        fboUniformData.u_audio_data = await initAudioAnalyserUniform(gl, fboSettings);
     }
 
     // initialize framebuffer object (FBO)
@@ -92,16 +99,11 @@ export async function initFramebuffer(gl, fboSettings, fboTextureName, options, 
         renderToTexture,
         fboUniform: fboUniforms[fboTextureName],
         addUniforms: async (uniformData) =>  {
-            console.log('adding extra uniforms for: ' + fboTextureName);
-            
             gl.useProgram(fboProgram);
             fboUniforms = {
                 ...fboUniforms,
                 ...(await initUniforms(gl, fboProgram, uniformData, fboTextureName))
             }
-
-            console.log("NEW FRESH UNIFORMS: ");
-            console.dir(fboUniforms);
         }
     }
 }

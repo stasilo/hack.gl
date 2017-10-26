@@ -5,8 +5,6 @@ export async function initUniforms(gl, program, uniformData, shaderName) {
     let result = {};
 
     for (let [uniformName, data] of iterateObject(uniformData)) {
-        console.log("processing " + uniformName);
-        
         let uniform = gl.getUniformLocation(program, new String(uniformName));
         if (!uniform) {
             console.warn(`hackGl: ${shaderName} shader ` +
@@ -66,7 +64,7 @@ export async function setUniformValue(gl, data, updating = false) {
                 data = bindFboTexture(gl, data);
             }
 
-            break;
+            break
 
         // integer
         case 'i':

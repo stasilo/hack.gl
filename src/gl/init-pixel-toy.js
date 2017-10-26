@@ -5,11 +5,13 @@ import {initFramebuffer} from './init-fbo';
 import executeCallbackOrArray from '../utils/execute-callback-or-array';
 import {updateFrameCount} from '../utils/frame-count';
 import {initCameraUniform} from '../webrtc/init-camera';
+import {initAudioAnalyserUniform} from '../utils/audio-analyser';
 import {rebindFboTextures} from './texture-utils';
 
 import {defaultUniforms} from './default-uniforms';
 
 const toyFragmentHeader = require('../shaders/pixeltoy/fragment-header.glsl');
+const audioFragmentHeader = require('../shaders/audio-fragment-header.glsl');
 const cameraFragmentHeader = require('../shaders/camera-fragment-header.glsl');
 const fboFragmentHeader = require('../shaders/fbo-fragment-header.glsl');
 const toyVertexShader = require('../shaders/pixeltoy/vertex-shader.glsl');
@@ -23,6 +25,7 @@ export default async function initPixelToy(gl, options) {
 
     let fragmentShader = `${toyFragmentHeader}
                           ${(options.injectWebcamUniform ? cameraFragmentHeader : '')}
+                          ${(options.audioAnalyser ? audioFragmentHeader : '')}
                           ${(options.feedbackFbo ? fboFragmentHeader : '')}
                           ${(options.fragmentShader ? options.fragmentShader : defaultFragmentShader)}`;
 
@@ -30,6 +33,10 @@ export default async function initPixelToy(gl, options) {
 
     if(options.injectWebcamUniform) {
         uniformData.u_camera = await initCameraUniform(options);
+    }
+
+    if(options.audioAnalyser) {
+        uniformData.u_audio_data = await initAudioAnalyserUniform(gl, options);
     }
 
     let fbos = [];
@@ -47,23 +54,11 @@ export default async function initPixelToy(gl, options) {
                 if(typeof fbo.fboUniform !== 'undefined') {
                     uniformData[`u_fbo${fboCount}`] = fbo.fboUniform;
                     fboUniforms[`u_fbo${fboCount}`] = fbo.fboUniform; // save fbo uniform data
-
-                    // fboUniforms[`u_fbo${fboCount}`] = {
-                    //     // ...fbo.fboUniform
-                    //     texture1: fbo.fboUniform.texture1,
-                    //     texture2: fbo.fboUniform.texture2,
-                    //     textureUnitNo: fbo.fboUniform.textureUnitNo,
-                    //     type: fbo.fboUniform.type
-                    // }; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
-
                 }
 
                 fbos.push(fbo);
                 fboCount++;
             }
-
-            console.log("PREV FBO UNIS:");
-            console.dir(fboUniforms);
 
             // add all fbo textures to all fbos (=> fbo0 can access fbo3 and fbo3 can access fb01 and so on...)
             for(let fbo of fbos) {

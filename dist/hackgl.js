@@ -2419,6 +2419,469 @@ if (hadRuntime) {
 );
 
 },{}],98:[function(_dereq_,module,exports){
+(function(self) {
+  'use strict';
+
+  if (self.fetch) {
+    return
+  }
+
+  var support = {
+    searchParams: 'URLSearchParams' in self,
+    iterable: 'Symbol' in self && 'iterator' in Symbol,
+    blob: 'FileReader' in self && 'Blob' in self && (function() {
+      try {
+        new Blob()
+        return true
+      } catch(e) {
+        return false
+      }
+    })(),
+    formData: 'FormData' in self,
+    arrayBuffer: 'ArrayBuffer' in self
+  }
+
+  if (support.arrayBuffer) {
+    var viewClasses = [
+      '[object Int8Array]',
+      '[object Uint8Array]',
+      '[object Uint8ClampedArray]',
+      '[object Int16Array]',
+      '[object Uint16Array]',
+      '[object Int32Array]',
+      '[object Uint32Array]',
+      '[object Float32Array]',
+      '[object Float64Array]'
+    ]
+
+    var isDataView = function(obj) {
+      return obj && DataView.prototype.isPrototypeOf(obj)
+    }
+
+    var isArrayBufferView = ArrayBuffer.isView || function(obj) {
+      return obj && viewClasses.indexOf(Object.prototype.toString.call(obj)) > -1
+    }
+  }
+
+  function normalizeName(name) {
+    if (typeof name !== 'string') {
+      name = String(name)
+    }
+    if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(name)) {
+      throw new TypeError('Invalid character in header field name')
+    }
+    return name.toLowerCase()
+  }
+
+  function normalizeValue(value) {
+    if (typeof value !== 'string') {
+      value = String(value)
+    }
+    return value
+  }
+
+  // Build a destructive iterator for the value list
+  function iteratorFor(items) {
+    var iterator = {
+      next: function() {
+        var value = items.shift()
+        return {done: value === undefined, value: value}
+      }
+    }
+
+    if (support.iterable) {
+      iterator[Symbol.iterator] = function() {
+        return iterator
+      }
+    }
+
+    return iterator
+  }
+
+  function Headers(headers) {
+    this.map = {}
+
+    if (headers instanceof Headers) {
+      headers.forEach(function(value, name) {
+        this.append(name, value)
+      }, this)
+    } else if (Array.isArray(headers)) {
+      headers.forEach(function(header) {
+        this.append(header[0], header[1])
+      }, this)
+    } else if (headers) {
+      Object.getOwnPropertyNames(headers).forEach(function(name) {
+        this.append(name, headers[name])
+      }, this)
+    }
+  }
+
+  Headers.prototype.append = function(name, value) {
+    name = normalizeName(name)
+    value = normalizeValue(value)
+    var oldValue = this.map[name]
+    this.map[name] = oldValue ? oldValue+','+value : value
+  }
+
+  Headers.prototype['delete'] = function(name) {
+    delete this.map[normalizeName(name)]
+  }
+
+  Headers.prototype.get = function(name) {
+    name = normalizeName(name)
+    return this.has(name) ? this.map[name] : null
+  }
+
+  Headers.prototype.has = function(name) {
+    return this.map.hasOwnProperty(normalizeName(name))
+  }
+
+  Headers.prototype.set = function(name, value) {
+    this.map[normalizeName(name)] = normalizeValue(value)
+  }
+
+  Headers.prototype.forEach = function(callback, thisArg) {
+    for (var name in this.map) {
+      if (this.map.hasOwnProperty(name)) {
+        callback.call(thisArg, this.map[name], name, this)
+      }
+    }
+  }
+
+  Headers.prototype.keys = function() {
+    var items = []
+    this.forEach(function(value, name) { items.push(name) })
+    return iteratorFor(items)
+  }
+
+  Headers.prototype.values = function() {
+    var items = []
+    this.forEach(function(value) { items.push(value) })
+    return iteratorFor(items)
+  }
+
+  Headers.prototype.entries = function() {
+    var items = []
+    this.forEach(function(value, name) { items.push([name, value]) })
+    return iteratorFor(items)
+  }
+
+  if (support.iterable) {
+    Headers.prototype[Symbol.iterator] = Headers.prototype.entries
+  }
+
+  function consumed(body) {
+    if (body.bodyUsed) {
+      return Promise.reject(new TypeError('Already read'))
+    }
+    body.bodyUsed = true
+  }
+
+  function fileReaderReady(reader) {
+    return new Promise(function(resolve, reject) {
+      reader.onload = function() {
+        resolve(reader.result)
+      }
+      reader.onerror = function() {
+        reject(reader.error)
+      }
+    })
+  }
+
+  function readBlobAsArrayBuffer(blob) {
+    var reader = new FileReader()
+    var promise = fileReaderReady(reader)
+    reader.readAsArrayBuffer(blob)
+    return promise
+  }
+
+  function readBlobAsText(blob) {
+    var reader = new FileReader()
+    var promise = fileReaderReady(reader)
+    reader.readAsText(blob)
+    return promise
+  }
+
+  function readArrayBufferAsText(buf) {
+    var view = new Uint8Array(buf)
+    var chars = new Array(view.length)
+
+    for (var i = 0; i < view.length; i++) {
+      chars[i] = String.fromCharCode(view[i])
+    }
+    return chars.join('')
+  }
+
+  function bufferClone(buf) {
+    if (buf.slice) {
+      return buf.slice(0)
+    } else {
+      var view = new Uint8Array(buf.byteLength)
+      view.set(new Uint8Array(buf))
+      return view.buffer
+    }
+  }
+
+  function Body() {
+    this.bodyUsed = false
+
+    this._initBody = function(body) {
+      this._bodyInit = body
+      if (!body) {
+        this._bodyText = ''
+      } else if (typeof body === 'string') {
+        this._bodyText = body
+      } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
+        this._bodyBlob = body
+      } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
+        this._bodyFormData = body
+      } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+        this._bodyText = body.toString()
+      } else if (support.arrayBuffer && support.blob && isDataView(body)) {
+        this._bodyArrayBuffer = bufferClone(body.buffer)
+        // IE 10-11 can't handle a DataView body.
+        this._bodyInit = new Blob([this._bodyArrayBuffer])
+      } else if (support.arrayBuffer && (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body))) {
+        this._bodyArrayBuffer = bufferClone(body)
+      } else {
+        throw new Error('unsupported BodyInit type')
+      }
+
+      if (!this.headers.get('content-type')) {
+        if (typeof body === 'string') {
+          this.headers.set('content-type', 'text/plain;charset=UTF-8')
+        } else if (this._bodyBlob && this._bodyBlob.type) {
+          this.headers.set('content-type', this._bodyBlob.type)
+        } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+          this.headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8')
+        }
+      }
+    }
+
+    if (support.blob) {
+      this.blob = function() {
+        var rejected = consumed(this)
+        if (rejected) {
+          return rejected
+        }
+
+        if (this._bodyBlob) {
+          return Promise.resolve(this._bodyBlob)
+        } else if (this._bodyArrayBuffer) {
+          return Promise.resolve(new Blob([this._bodyArrayBuffer]))
+        } else if (this._bodyFormData) {
+          throw new Error('could not read FormData body as blob')
+        } else {
+          return Promise.resolve(new Blob([this._bodyText]))
+        }
+      }
+
+      this.arrayBuffer = function() {
+        if (this._bodyArrayBuffer) {
+          return consumed(this) || Promise.resolve(this._bodyArrayBuffer)
+        } else {
+          return this.blob().then(readBlobAsArrayBuffer)
+        }
+      }
+    }
+
+    this.text = function() {
+      var rejected = consumed(this)
+      if (rejected) {
+        return rejected
+      }
+
+      if (this._bodyBlob) {
+        return readBlobAsText(this._bodyBlob)
+      } else if (this._bodyArrayBuffer) {
+        return Promise.resolve(readArrayBufferAsText(this._bodyArrayBuffer))
+      } else if (this._bodyFormData) {
+        throw new Error('could not read FormData body as text')
+      } else {
+        return Promise.resolve(this._bodyText)
+      }
+    }
+
+    if (support.formData) {
+      this.formData = function() {
+        return this.text().then(decode)
+      }
+    }
+
+    this.json = function() {
+      return this.text().then(JSON.parse)
+    }
+
+    return this
+  }
+
+  // HTTP methods whose capitalization should be normalized
+  var methods = ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT']
+
+  function normalizeMethod(method) {
+    var upcased = method.toUpperCase()
+    return (methods.indexOf(upcased) > -1) ? upcased : method
+  }
+
+  function Request(input, options) {
+    options = options || {}
+    var body = options.body
+
+    if (input instanceof Request) {
+      if (input.bodyUsed) {
+        throw new TypeError('Already read')
+      }
+      this.url = input.url
+      this.credentials = input.credentials
+      if (!options.headers) {
+        this.headers = new Headers(input.headers)
+      }
+      this.method = input.method
+      this.mode = input.mode
+      if (!body && input._bodyInit != null) {
+        body = input._bodyInit
+        input.bodyUsed = true
+      }
+    } else {
+      this.url = String(input)
+    }
+
+    this.credentials = options.credentials || this.credentials || 'omit'
+    if (options.headers || !this.headers) {
+      this.headers = new Headers(options.headers)
+    }
+    this.method = normalizeMethod(options.method || this.method || 'GET')
+    this.mode = options.mode || this.mode || null
+    this.referrer = null
+
+    if ((this.method === 'GET' || this.method === 'HEAD') && body) {
+      throw new TypeError('Body not allowed for GET or HEAD requests')
+    }
+    this._initBody(body)
+  }
+
+  Request.prototype.clone = function() {
+    return new Request(this, { body: this._bodyInit })
+  }
+
+  function decode(body) {
+    var form = new FormData()
+    body.trim().split('&').forEach(function(bytes) {
+      if (bytes) {
+        var split = bytes.split('=')
+        var name = split.shift().replace(/\+/g, ' ')
+        var value = split.join('=').replace(/\+/g, ' ')
+        form.append(decodeURIComponent(name), decodeURIComponent(value))
+      }
+    })
+    return form
+  }
+
+  function parseHeaders(rawHeaders) {
+    var headers = new Headers()
+    rawHeaders.split(/\r?\n/).forEach(function(line) {
+      var parts = line.split(':')
+      var key = parts.shift().trim()
+      if (key) {
+        var value = parts.join(':').trim()
+        headers.append(key, value)
+      }
+    })
+    return headers
+  }
+
+  Body.call(Request.prototype)
+
+  function Response(bodyInit, options) {
+    if (!options) {
+      options = {}
+    }
+
+    this.type = 'default'
+    this.status = 'status' in options ? options.status : 200
+    this.ok = this.status >= 200 && this.status < 300
+    this.statusText = 'statusText' in options ? options.statusText : 'OK'
+    this.headers = new Headers(options.headers)
+    this.url = options.url || ''
+    this._initBody(bodyInit)
+  }
+
+  Body.call(Response.prototype)
+
+  Response.prototype.clone = function() {
+    return new Response(this._bodyInit, {
+      status: this.status,
+      statusText: this.statusText,
+      headers: new Headers(this.headers),
+      url: this.url
+    })
+  }
+
+  Response.error = function() {
+    var response = new Response(null, {status: 0, statusText: ''})
+    response.type = 'error'
+    return response
+  }
+
+  var redirectStatuses = [301, 302, 303, 307, 308]
+
+  Response.redirect = function(url, status) {
+    if (redirectStatuses.indexOf(status) === -1) {
+      throw new RangeError('Invalid status code')
+    }
+
+    return new Response(null, {status: status, headers: {location: url}})
+  }
+
+  self.Headers = Headers
+  self.Request = Request
+  self.Response = Response
+
+  self.fetch = function(input, init) {
+    return new Promise(function(resolve, reject) {
+      var request = new Request(input, init)
+      var xhr = new XMLHttpRequest()
+
+      xhr.onload = function() {
+        var options = {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers: parseHeaders(xhr.getAllResponseHeaders() || '')
+        }
+        options.url = 'responseURL' in xhr ? xhr.responseURL : options.headers.get('X-Request-URL')
+        var body = 'response' in xhr ? xhr.response : xhr.responseText
+        resolve(new Response(body, options))
+      }
+
+      xhr.onerror = function() {
+        reject(new TypeError('Network request failed'))
+      }
+
+      xhr.ontimeout = function() {
+        reject(new TypeError('Network request failed'))
+      }
+
+      xhr.open(request.method, request.url, true)
+
+      if (request.credentials === 'include') {
+        xhr.withCredentials = true
+      }
+
+      if ('responseType' in xhr && support.blob) {
+        xhr.responseType = 'blob'
+      }
+
+      request.headers.forEach(function(value, name) {
+        xhr.setRequestHeader(name, value)
+      })
+
+      xhr.send(typeof request._bodyInit === 'undefined' ? null : request._bodyInit)
+    })
+  }
+  self.fetch.polyfill = true
+})(typeof self !== 'undefined' ? self : this);
+
+},{}],99:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2481,7 +2944,7 @@ function __loadShader(gl, type, source) {
 }
 module.exports = exports['default'];
 
-},{}],99:[function(_dereq_,module,exports){
+},{}],100:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2525,7 +2988,7 @@ var defaultUniforms = exports.defaultUniforms = {
     }
 };
 
-},{"../utils/frame-count":114,"../utils/get-mouse-position":115}],100:[function(_dereq_,module,exports){
+},{"../utils/frame-count":117,"../utils/get-mouse-position":118}],101:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2554,7 +3017,7 @@ var initFramebuffer = exports.initFramebuffer = function () {
             while (1) {
                 switch (_context2.prev = _context2.next) {
                     case 0:
-                        fboShader = toyFragmentHeader + '\n                     ' + (fboSettings.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                     ' + (fboSettings ? fboFragmentHeader : '') + '\n                     ' + fboSettings.fragmentShader;
+                        fboShader = toyFragmentHeader + '\n                     ' + (fboSettings.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                     ' + (fboSettings.audioAnalyser ? audioFragmentHeader : '') + '\n                     ' + (fboSettings ? fboFragmentHeader : '') + '\n                     ' + fboSettings.fragmentShader;
                         fboUniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, fboSettings.uniforms);
 
 
@@ -2572,23 +3035,35 @@ var initFramebuffer = exports.initFramebuffer = function () {
                         fboUniformData.u_camera = _context2.sent;
 
                     case 7:
+                        if (!fboSettings.audioAnalyser) {
+                            _context2.next = 11;
+                            break;
+                        }
+
+                        _context2.next = 10;
+                        return (0, _audioAnalyser.initAudioAnalyserUniform)(gl, fboSettings);
+
+                    case 10:
+                        fboUniformData.u_audio_data = _context2.sent;
+
+                    case 11:
 
                         // initialize framebuffer object (FBO)
                         fbo = void 0;
-                        _context2.prev = 8;
+                        _context2.prev = 12;
 
                         fbo = _initFramebufferObject(gl, fboSettings, options);
-                        _context2.next = 16;
+                        _context2.next = 20;
                         break;
 
-                    case 12:
-                        _context2.prev = 12;
-                        _context2.t0 = _context2['catch'](8);
+                    case 16:
+                        _context2.prev = 16;
+                        _context2.t0 = _context2['catch'](12);
 
                         console.error('hackGl: ' + _context2.t0);
                         return _context2.abrupt('return');
 
-                    case 16:
+                    case 20:
 
                         fboUniformData[fboTextureName] = {
                             type: 'fbo_t',
@@ -2599,21 +3074,21 @@ var initFramebuffer = exports.initFramebuffer = function () {
                         fboProgram = (0, _createGlProgram2.default)(gl, toyVertexShader, fboShader);
 
                         if (fboProgram) {
-                            _context2.next = 20;
+                            _context2.next = 24;
                             break;
                         }
 
                         throw 'hack.Gl: failed to create fbo gl program!';
 
-                    case 20:
+                    case 24:
 
                         gl.useProgram(fboProgram);
 
                         fboVertexCount = (0, _initVertexBuffers2.default)(gl, fboProgram);
-                        _context2.next = 24;
+                        _context2.next = 28;
                         return (0, _uniformUtils.initUniforms)(gl, fboProgram, fboUniformData, fboTextureName);
 
-                    case 24:
+                    case 28:
                         fboUniforms = _context2.sent;
 
                         renderToTexture = function renderToTexture() {
@@ -2656,24 +3131,18 @@ var initFramebuffer = exports.initFramebuffer = function () {
                                         while (1) {
                                             switch (_context.prev = _context.next) {
                                                 case 0:
-                                                    console.log('adding extra uniforms for: ' + fboTextureName);
-
                                                     gl.useProgram(fboProgram);
                                                     _context.t0 = _extends3.default;
                                                     _context.t1 = {};
                                                     _context.t2 = fboUniforms;
-                                                    _context.next = 7;
+                                                    _context.next = 6;
                                                     return (0, _uniformUtils.initUniforms)(gl, fboProgram, uniformData, fboTextureName);
 
-                                                case 7:
+                                                case 6:
                                                     _context.t3 = _context.sent;
                                                     fboUniforms = (0, _context.t0)(_context.t1, _context.t2, _context.t3);
 
-
-                                                    console.log("NEW FRESH UNIFORMS: ");
-                                                    console.dir(fboUniforms);
-
-                                                case 11:
+                                                case 8:
                                                 case 'end':
                                                     return _context.stop();
                                             }
@@ -2687,12 +3156,12 @@ var initFramebuffer = exports.initFramebuffer = function () {
                             }()
                         });
 
-                    case 27:
+                    case 31:
                     case 'end':
                         return _context2.stop();
                 }
             }
-        }, _callee2, this, [[8, 12]]);
+        }, _callee2, this, [[12, 16]]);
     }));
 
     return function initFramebuffer(_x, _x2, _x3, _x4, _x5) {
@@ -2712,6 +3181,8 @@ var _uniformUtils = _dereq_('./uniform-utils');
 
 var _initCamera = _dereq_('../webrtc/init-camera');
 
+var _audioAnalyser = _dereq_('../utils/audio-analyser');
+
 var _defaultUniforms = _dereq_('./default-uniforms');
 
 var _textureUtils = _dereq_('./texture-utils');
@@ -2719,6 +3190,7 @@ var _textureUtils = _dereq_('./texture-utils');
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var toyFragmentHeader = _dereq_('../shaders/pixeltoy/fragment-header.glsl');
+var audioFragmentHeader = _dereq_('../shaders/audio-fragment-header.glsl');
 var cameraFragmentHeader = _dereq_('../shaders/camera-fragment-header.glsl');
 var fboFragmentHeader = _dereq_('../shaders/fbo-fragment-header.glsl');
 var toyVertexShader = _dereq_('../shaders/pixeltoy/vertex-shader.glsl');
@@ -2823,7 +3295,7 @@ function _initFramebufferObject(gl, fboSettings, options) {
     return framebuffer;
 }
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../webrtc/init-camera":117,"./create-gl-program":98,"./default-uniforms":99,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],101:[function(_dereq_,module,exports){
+},{"../shaders/audio-fragment-header.glsl":109,"../shaders/camera-fragment-header.glsl":110,"../shaders/fbo-fragment-header.glsl":111,"../shaders/pixeltoy/default-fragmentshader.glsl":112,"../shaders/pixeltoy/fragment-header.glsl":113,"../shaders/pixeltoy/vertex-shader.glsl":114,"../utils/audio-analyser":115,"../webrtc/init-camera":120,"./create-gl-program":99,"./default-uniforms":100,"./init-vertex-buffers":103,"./texture-utils":104,"./uniform-utils":105,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2866,6 +3338,8 @@ var _frameCount = _dereq_('../utils/frame-count');
 
 var _initCamera = _dereq_('../webrtc/init-camera');
 
+var _audioAnalyser = _dereq_('../utils/audio-analyser');
+
 var _textureUtils = _dereq_('./texture-utils');
 
 var _defaultUniforms = _dereq_('./default-uniforms');
@@ -2873,6 +3347,7 @@ var _defaultUniforms = _dereq_('./default-uniforms');
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var toyFragmentHeader = _dereq_('../shaders/pixeltoy/fragment-header.glsl');
+var audioFragmentHeader = _dereq_('../shaders/audio-fragment-header.glsl');
 var cameraFragmentHeader = _dereq_('../shaders/camera-fragment-header.glsl');
 var fboFragmentHeader = _dereq_('../shaders/fbo-fragment-header.glsl');
 var toyVertexShader = _dereq_('../shaders/pixeltoy/vertex-shader.glsl');
@@ -2887,7 +3362,7 @@ exports.default = function () {
                 switch (_context.prev = _context.next) {
                     case 0:
                         uniformData = (0, _extends3.default)({}, _defaultUniforms.defaultUniforms, options.uniforms);
-                        fragmentShader = toyFragmentHeader + '\n                          ' + (options.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                          ' + (options.feedbackFbo ? fboFragmentHeader : '') + '\n                          ' + (options.fragmentShader ? options.fragmentShader : defaultFragmentShader);
+                        fragmentShader = toyFragmentHeader + '\n                          ' + (options.injectWebcamUniform ? cameraFragmentHeader : '') + '\n                          ' + (options.audioAnalyser ? audioFragmentHeader : '') + '\n                          ' + (options.feedbackFbo ? fboFragmentHeader : '') + '\n                          ' + (options.fragmentShader ? options.fragmentShader : defaultFragmentShader);
 
 
                         uniformData.u_resolution.value = [options.resolution.width, options.resolution.height];
@@ -2904,18 +3379,30 @@ exports.default = function () {
                         uniformData.u_camera = _context.sent;
 
                     case 7:
+                        if (!options.audioAnalyser) {
+                            _context.next = 11;
+                            break;
+                        }
+
+                        _context.next = 10;
+                        return (0, _audioAnalyser.initAudioAnalyserUniform)(gl, options);
+
+                    case 10:
+                        uniformData.u_audio_data = _context.sent;
+
+                    case 11:
                         fbos = [];
                         fboUniforms = {};
 
                         if (!options.feedbackFbo) {
-                            _context.next = 78;
+                            _context.next = 80;
                             break;
                         }
 
                         fboCount = 0;
 
                         if (!options.feedbackFbo.length) {
-                            _context.next = 73;
+                            _context.next = 75;
                             break;
                         }
 
@@ -2923,171 +3410,160 @@ exports.default = function () {
                         _iteratorNormalCompletion = true;
                         _didIteratorError = false;
                         _iteratorError = undefined;
-                        _context.prev = 16;
+                        _context.prev = 20;
                         _iterator = (0, _getIterator3.default)(options.feedbackFbo);
 
-                    case 18:
+                    case 22:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 29;
+                            _context.next = 33;
                             break;
                         }
 
                         fboSettings = _step.value;
-                        _context.next = 22;
+                        _context.next = 26;
                         return (0, _initFbo.initFramebuffer)(gl, fboSettings, 'u_fbo' + fboCount, options, _fboUniforms);
 
-                    case 22:
+                    case 26:
                         fbo = _context.sent;
 
 
                         if (typeof fbo.fboUniform !== 'undefined') {
                             uniformData['u_fbo' + fboCount] = fbo.fboUniform;
                             _fboUniforms['u_fbo' + fboCount] = fbo.fboUniform; // save fbo uniform data
-
-                            // fboUniforms[`u_fbo${fboCount}`] = {
-                            //     // ...fbo.fboUniform
-                            //     texture1: fbo.fboUniform.texture1,
-                            //     texture2: fbo.fboUniform.texture2,
-                            //     textureUnitNo: fbo.fboUniform.textureUnitNo,
-                            //     type: fbo.fboUniform.type
-                            // }; // enable the rendered fbo texture from the prev fbo shader in the next fbo shader
                         }
 
                         fbos.push(fbo);
                         fboCount++;
 
-                    case 26:
+                    case 30:
                         _iteratorNormalCompletion = true;
-                        _context.next = 18;
+                        _context.next = 22;
                         break;
 
-                    case 29:
-                        _context.next = 35;
+                    case 33:
+                        _context.next = 39;
                         break;
-
-                    case 31:
-                        _context.prev = 31;
-                        _context.t0 = _context['catch'](16);
-                        _didIteratorError = true;
-                        _iteratorError = _context.t0;
 
                     case 35:
                         _context.prev = 35;
-                        _context.prev = 36;
+                        _context.t0 = _context['catch'](20);
+                        _didIteratorError = true;
+                        _iteratorError = _context.t0;
+
+                    case 39:
+                        _context.prev = 39;
+                        _context.prev = 40;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 38:
-                        _context.prev = 38;
+                    case 42:
+                        _context.prev = 42;
 
                         if (!_didIteratorError) {
-                            _context.next = 41;
+                            _context.next = 45;
                             break;
                         }
 
                         throw _iteratorError;
 
-                    case 41:
-                        return _context.finish(38);
+                    case 45:
+                        return _context.finish(42);
 
-                    case 42:
-                        return _context.finish(35);
+                    case 46:
+                        return _context.finish(39);
 
-                    case 43:
-
-                        console.log("PREV FBO UNIS:");
-                        console.dir(_fboUniforms);
+                    case 47:
 
                         // add all fbo textures to all fbos (=> fbo0 can access fbo3 and fbo3 can access fb01 and so on...)
                         _iteratorNormalCompletion2 = true;
                         _didIteratorError2 = false;
                         _iteratorError2 = undefined;
-                        _context.prev = 48;
+                        _context.prev = 50;
                         _iterator2 = (0, _getIterator3.default)(fbos);
 
-                    case 50:
+                    case 52:
                         if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
-                            _context.next = 57;
+                            _context.next = 59;
                             break;
                         }
 
                         _fbo = _step2.value;
-                        _context.next = 54;
+                        _context.next = 56;
                         return _fbo.addUniforms(_fboUniforms);
 
-                    case 54:
+                    case 56:
                         _iteratorNormalCompletion2 = true;
-                        _context.next = 50;
-                        break;
-
-                    case 57:
-                        _context.next = 63;
+                        _context.next = 52;
                         break;
 
                     case 59:
-                        _context.prev = 59;
-                        _context.t1 = _context['catch'](48);
+                        _context.next = 65;
+                        break;
+
+                    case 61:
+                        _context.prev = 61;
+                        _context.t1 = _context['catch'](50);
                         _didIteratorError2 = true;
                         _iteratorError2 = _context.t1;
 
-                    case 63:
-                        _context.prev = 63;
-                        _context.prev = 64;
+                    case 65:
+                        _context.prev = 65;
+                        _context.prev = 66;
 
                         if (!_iteratorNormalCompletion2 && _iterator2.return) {
                             _iterator2.return();
                         }
 
-                    case 66:
-                        _context.prev = 66;
+                    case 68:
+                        _context.prev = 68;
 
                         if (!_didIteratorError2) {
-                            _context.next = 69;
+                            _context.next = 71;
                             break;
                         }
 
                         throw _iteratorError2;
 
-                    case 69:
-                        return _context.finish(66);
-
-                    case 70:
-                        return _context.finish(63);
-
                     case 71:
-                        _context.next = 78;
-                        break;
+                        return _context.finish(68);
+
+                    case 72:
+                        return _context.finish(65);
 
                     case 73:
-                        _context.next = 75;
-                        return (0, _initFbo.initFramebuffer)(gl, options.feedbackFbo, 'u_fbo' + fboCount, options);
+                        _context.next = 80;
+                        break;
 
                     case 75:
+                        _context.next = 77;
+                        return (0, _initFbo.initFramebuffer)(gl, options.feedbackFbo, 'u_fbo' + fboCount, options);
+
+                    case 77:
                         _fbo2 = _context.sent;
 
                         uniformData['u_fbo' + fboCount] = _fbo2.fboUniform;
                         fbos.push(_fbo2);
 
-                    case 78:
+                    case 80:
                         program = (0, _createGlProgram2.default)(gl, toyVertexShader, fragmentShader);
 
                         if (program) {
-                            _context.next = 81;
+                            _context.next = 83;
                             break;
                         }
 
                         throw 'hack.Gl: failed to create main gl program!';
 
-                    case 81:
+                    case 83:
 
                         gl.useProgram(program);
                         vertexCount = (0, _initVertexBuffers2.default)(gl, program, options);
-                        _context.next = 85;
+                        _context.next = 87;
                         return (0, _uniformUtils.initUniforms)(gl, program, uniformData, 'main fragment');
 
-                    case 85:
+                    case 87:
                         uniforms = _context.sent;
 
                         _renderFragmentShader = function _renderFragmentShader() {
@@ -3141,12 +3617,12 @@ exports.default = function () {
 
                         _render();
 
-                    case 89:
+                    case 91:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[16, 31, 35, 43], [36,, 38, 42], [48, 59, 63, 71], [64,, 66, 70]]);
+        }, _callee, this, [[20, 35, 39, 47], [40,, 42, 46], [50, 61, 65, 73], [66,, 68, 72]]);
     }));
 
     function initPixelToy(_x, _x2) {
@@ -3158,7 +3634,7 @@ exports.default = function () {
 
 module.exports = exports['default'];
 
-},{"../shaders/camera-fragment-header.glsl":108,"../shaders/fbo-fragment-header.glsl":109,"../shaders/pixeltoy/default-fragmentshader.glsl":110,"../shaders/pixeltoy/fragment-header.glsl":111,"../shaders/pixeltoy/vertex-shader.glsl":112,"../utils/execute-callback-or-array":113,"../utils/frame-count":114,"../webrtc/init-camera":117,"./create-gl-program":98,"./default-uniforms":99,"./init-fbo":100,"./init-vertex-buffers":102,"./texture-utils":103,"./uniform-utils":104,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],102:[function(_dereq_,module,exports){
+},{"../shaders/audio-fragment-header.glsl":109,"../shaders/camera-fragment-header.glsl":110,"../shaders/fbo-fragment-header.glsl":111,"../shaders/pixeltoy/default-fragmentshader.glsl":112,"../shaders/pixeltoy/fragment-header.glsl":113,"../shaders/pixeltoy/vertex-shader.glsl":114,"../utils/audio-analyser":115,"../utils/execute-callback-or-array":116,"../utils/frame-count":117,"../webrtc/init-camera":120,"./create-gl-program":99,"./default-uniforms":100,"./init-fbo":101,"./init-vertex-buffers":103,"./texture-utils":104,"./uniform-utils":105,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],103:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3196,7 +3672,7 @@ function initVertexBuffers(gl, program) {
 }
 module.exports = exports['default'];
 
-},{}],103:[function(_dereq_,module,exports){
+},{}],104:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3320,8 +3796,17 @@ function initTexture(gl, data, image) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeatTypeS);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatTypeT);
 
+    var internalFormat = gl.RGBA; //data.internalFormat || gl.RGBA;
+    var srcFormat = gl.RGBA; //data.srcFormat || gl.RGBA;
+    var border = 0;
+
     // set the texture image
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    if (typeof data.size !== 'undefined') {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.UNSIGNED_BYTE, image);
+        // gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.FLOAT, data.value);
+    } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, image);
+    }
 
     if (data.generateMips) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
@@ -3375,14 +3860,24 @@ function rebindFboTextures(gl, uniforms) {
 function updateTexture(gl, data) {
     gl.activeTexture(gl['TEXTURE' + data.textureUnitNo]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
+
+    var internalFormat = gl.RGBA; //data.internalFormat || gl.RGBA;
+    var srcFormat = gl.RGBA; //data.srcFormat || gl.RGBA;
+
+    if (typeof data.size !== 'undefined') {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.UNSIGNED_BYTE, data.value);
+    } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, data.value);
+    }
+
+    // gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, data.value);
 }
 
 function _imageDimensionArePowerOf2(image) {
     return (image.naturalWidth & image.naturalWidth - 1) == 0 && (image.naturalHeight & image.naturalHeight - 1) == 0;
 }
 
-},{"babel-runtime/core-js/object/keys":5,"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/toConsumableArray":10,"babel-runtime/regenerator":11}],104:[function(_dereq_,module,exports){
+},{"babel-runtime/core-js/object/keys":5,"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/toConsumableArray":10,"babel-runtime/regenerator":11}],105:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3427,18 +3922,15 @@ var initUniforms = exports.initUniforms = function () {
 
                     case 6:
                         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-                            _context.next = 22;
+                            _context.next = 21;
                             break;
                         }
 
                         _step$value = (0, _slicedToArray3.default)(_step.value, 2), uniformName = _step$value[0], data = _step$value[1];
-
-                        console.log("processing " + uniformName);
-
                         uniform = gl.getUniformLocation(program, new String(uniformName));
 
                         if (uniform) {
-                            _context.next = 14;
+                            _context.next = 13;
                             break;
                         }
 
@@ -3447,75 +3939,75 @@ var initUniforms = exports.initUniforms = function () {
                         // don't init uniform, but still init texture unit for the fbo rendering
 
                         if (!(data.type != 'fbo_t')) {
-                            _context.next = 14;
+                            _context.next = 13;
                             break;
                         }
 
-                        return _context.abrupt('continue', 19);
+                        return _context.abrupt('continue', 18);
 
-                    case 14:
+                    case 13:
                         updatedData = (0, _extends3.default)({}, data, {
                             uniform: uniform
                         });
 
                         // await needed for texture image data loading
 
-                        _context.next = 17;
+                        _context.next = 16;
                         return setUniformValue(gl, updatedData);
 
-                    case 17:
+                    case 16:
                         updatedData = _context.sent;
 
                         result[uniformName] = updatedData;
 
-                    case 19:
+                    case 18:
                         _iteratorNormalCompletion = true;
                         _context.next = 6;
                         break;
 
-                    case 22:
-                        _context.next = 28;
+                    case 21:
+                        _context.next = 27;
                         break;
 
-                    case 24:
-                        _context.prev = 24;
+                    case 23:
+                        _context.prev = 23;
                         _context.t0 = _context['catch'](4);
                         _didIteratorError = true;
                         _iteratorError = _context.t0;
 
-                    case 28:
+                    case 27:
+                        _context.prev = 27;
                         _context.prev = 28;
-                        _context.prev = 29;
 
                         if (!_iteratorNormalCompletion && _iterator.return) {
                             _iterator.return();
                         }
 
-                    case 31:
-                        _context.prev = 31;
+                    case 30:
+                        _context.prev = 30;
 
                         if (!_didIteratorError) {
-                            _context.next = 34;
+                            _context.next = 33;
                             break;
                         }
 
                         throw _iteratorError;
 
+                    case 33:
+                        return _context.finish(30);
+
                     case 34:
-                        return _context.finish(31);
+                        return _context.finish(27);
 
                     case 35:
-                        return _context.finish(28);
-
-                    case 36:
                         return _context.abrupt('return', result);
 
-                    case 37:
+                    case 36:
                     case 'end':
                         return _context.stop();
                 }
             }
-        }, _callee, this, [[4, 24, 28, 36], [29,, 31, 35]]);
+        }, _callee, this, [[4, 23, 27, 35], [28,, 30, 34]]);
     }));
 
     return function initUniforms(_x, _x2, _x3, _x4) {
@@ -3666,7 +4158,7 @@ function updateUniforms(gl, uniforms, options) {
     return result;
 }
 
-},{"../utils/iterate-object":116,"./texture-utils":103,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/helpers/slicedToArray":9,"babel-runtime/regenerator":11}],105:[function(_dereq_,module,exports){
+},{"../utils/iterate-object":119,"./texture-utils":104,"babel-runtime/core-js/get-iterator":2,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/helpers/slicedToArray":9,"babel-runtime/regenerator":11}],106:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3678,6 +4170,8 @@ var _toConsumableArray2 = _dereq_('babel-runtime/helpers/toConsumableArray');
 var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
 
 exports.default = hackGl;
+
+_dereq_('whatwg-fetch');
 
 var _webglUtils = _dereq_('./lib/webgl-utils');
 
@@ -3694,7 +4188,6 @@ var _options2 = _interopRequireDefault(_options);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 // require('babel-polyfill');
-
 function hackGl(options) {
     options = (0, _options2.default)(options);
     if (!options.isValid) {
@@ -3703,6 +4196,9 @@ function hackGl(options) {
 
     _setupCanvasResolution(options);
     var gl = _getWebGlContext(options.canvas);
+
+    // var float_texture_ext = gl.getExtension('OES_texture_float');
+    // console.log("Float texture extension: " + float_texture_ext);
 
     // specify the color for clearing canvas
     gl.clearColor.apply(gl, (0, _toConsumableArray3.default)(options.clearColor));
@@ -3731,7 +4227,7 @@ function _setupCanvasResolution(options) {
 }
 module.exports = exports['default'];
 
-},{"./gl/init-pixel-toy":101,"./init/options":106,"./lib/webgl-utils":107,"babel-runtime/helpers/toConsumableArray":10}],106:[function(_dereq_,module,exports){
+},{"./gl/init-pixel-toy":102,"./init/options":107,"./lib/webgl-utils":108,"babel-runtime/helpers/toConsumableArray":10,"whatwg-fetch":98}],107:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3788,7 +4284,7 @@ function validateOptions(options) {
 }
 module.exports = exports['default'];
 
-},{"babel-runtime/helpers/extends":8}],107:[function(_dereq_,module,exports){
+},{"babel-runtime/helpers/extends":8}],108:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3968,22 +4464,140 @@ exports.default = new function () {
 }();
 module.exports = exports['default'];
 
-},{}],108:[function(_dereq_,module,exports){
-module.exports = "uniform sampler2D u_camera;\n";
-
 },{}],109:[function(_dereq_,module,exports){
-module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform sampler2D u_fbo2;\nuniform sampler2D u_fbo3;\nuniform sampler2D u_fbo4;\nuniform sampler2D u_fbo5;\nuniform sampler2D u_fbo6;\n";
+module.exports = "uniform sampler2D u_audio_data;\n\n// https://stackoverflow.com/questions/35799286\nfloat _hackgl_toLog(float value, float min, float max){\n    float exp = (value-min) / (max-min);\n    return min * pow(max/min, exp);\n}\n\n/*\n * Freq data is stored as unsigned integers/rgba. Since webGl 1 doesn't have texelFetch we have to\n * access the data with uv coordinates using texture2D.\n *\n * Example:\n * Assume an fft size of 512, which means a bin count of 256 freq data values.\n * To access freq data at, for example, index 128 in the original array returned from the web audio api, do:\n * _hackgl_getFreqData(128.0/256.0);\n */\n\nfloat _hackgl_getFreqData(float index) {\n    return texture2D(u_audio_data, vec2(index, 0.5)).r;\n}\n\nfloat hackgl_getAudioFreqData(float index, float minCrop, float maxCrop) {\n    // crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xCoord);\n    return fft;\n}\n\nfloat hackgl_getAudioFreqData(float index) {\n    return hackgl_getAudioFreqData(index, 0.3, 0.7);\n}\n\nfloat hackgl_getLogAudioFreqData(float index, float minCrop, float maxCrop) {\n    //crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n    //logarithmic sampling\n    float xPos = _hackgl_toLog(xCoord, 0.01, 1.0);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xPos);\n    return fft;\n}\n\nfloat hackgl_getLogAudioFreqData(float index) {\n    return hackgl_getLogAudioFreqData(index, 0.3, 0.7);\n}\n";
 
 },{}],110:[function(_dereq_,module,exports){
-module.exports = "void main() {\n    vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n}\n";
+module.exports = "uniform sampler2D u_camera;\n";
 
 },{}],111:[function(_dereq_,module,exports){
-module.exports = "#ifdef GL_ES\n    precision mediump float;\n#endif\n\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\nuniform int u_frame_count;\n";
+module.exports = "uniform sampler2D u_fbo0;\nuniform sampler2D u_fbo1;\nuniform sampler2D u_fbo2;\nuniform sampler2D u_fbo3;\nuniform sampler2D u_fbo4;\nuniform sampler2D u_fbo5;\nuniform sampler2D u_fbo6;\n";
 
 },{}],112:[function(_dereq_,module,exports){
-module.exports = "attribute vec4 a_position;\n\nvoid main() {\n    gl_Position = a_position;\n}\n";
+module.exports = "void main() {\n    vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n}\n";
 
 },{}],113:[function(_dereq_,module,exports){
+module.exports = "#ifdef GL_ES\n    precision mediump float;\n#endif\n\nuniform vec2 u_resolution;\nuniform vec2 u_mouse;\nuniform float u_time;\nuniform int u_frame_count;\n";
+
+},{}],114:[function(_dereq_,module,exports){
+module.exports = "attribute vec4 a_position;\n\nvoid main() {\n    gl_Position = a_position;\n}\n";
+
+},{}],115:[function(_dereq_,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.initAudioAnalyserUniform = undefined;
+
+var _regenerator = _dereq_('babel-runtime/regenerator');
+
+var _regenerator2 = _interopRequireDefault(_regenerator);
+
+var _extends2 = _dereq_('babel-runtime/helpers/extends');
+
+var _extends3 = _interopRequireDefault(_extends2);
+
+var _asyncToGenerator2 = _dereq_('babel-runtime/helpers/asyncToGenerator');
+
+var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
+
+var initAudioAnalyserUniform = exports.initAudioAnalyserUniform = function () {
+    var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, options) {
+        var analyserOptions;
+        return _regenerator2.default.wrap(function _callee$(_context) {
+            while (1) {
+                switch (_context.prev = _context.next) {
+                    case 0:
+                        if (!audioUniform) {
+                            _context.next = 2;
+                            break;
+                        }
+
+                        return _context.abrupt('return', audioUniform);
+
+                    case 2:
+                        analyserOptions = options.audioAnalyser;
+
+
+                        analyser = context.createAnalyser();
+                        analyser.fftSize = analyserOptions.fftSize || 1024; // 1024 / 2 = 512 data points per sample of sound
+                        analyser.smoothingTimeConstant = analyserOptions.smoothing || 0.5; //0.2;
+
+                        return _context.abrupt('return', fetch(analyserOptions.url).then(function (response) {
+                            return response.arrayBuffer();
+                        }).then(function (arrayBuffer) {
+                            return context.decodeAudioData(arrayBuffer);
+                        }).then(function (audioBuffer) {
+                            var source = context.createBufferSource();
+
+                            source.buffer = audioBuffer;
+                            source.connect(analyser);
+                            analyser.connect(context.destination);
+                            source.start();
+                            source.loop = true;
+
+                            audioUniform = (0, _extends3.default)({}, audioUniformBase, {
+                                value: getFrequencyData(),
+                                size: [analyser.frequencyBinCount, 1]
+                            });
+
+                            return audioUniform;
+                        }).catch(function (error) {
+                            console.warn('hack.gl: failed to fetch audio data: ');
+                            console.dir(error);
+                        }));
+
+                    case 7:
+                    case 'end':
+                        return _context.stop();
+                }
+            }
+        }, _callee, this);
+    }));
+
+    return function initAudioAnalyserUniform(_x, _x2) {
+        return _ref.apply(this, arguments);
+    };
+}();
+
+exports.getFrequencyData = getFrequencyData;
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var context = new (window.AudioContext || window.webkitAudioContext)();
+var analyser = null,
+    source = null;
+
+var audioUniformBase = {
+    type: 't',
+    needsUpdate: true,
+    update: function update() {
+        return getFrequencyData();
+    },
+    wrapS: 'clamp',
+    wrapT: 'clamp'
+};
+
+var audioUniform = null;
+
+function getFrequencyData() {
+    var size = analyser.frequencyBinCount;
+
+    var dataArray = new Uint8Array(size);
+    var shaderData = new Uint8Array(size * 4);
+
+    // analyser.getByteTimeDomainData(dataArray);
+    analyser.getByteFrequencyData(dataArray);
+
+    dataArray.forEach(function (val, i) {
+        shaderData.fill(val, i * 4, (i + 1) * 4);
+    });
+
+    return shaderData;
+}
+
+},{"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}],116:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4003,7 +4617,7 @@ function executeCallbackOrArray(callback) {
 }
 module.exports = exports['default'];
 
-},{}],114:[function(_dereq_,module,exports){
+},{}],117:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -4027,7 +4641,7 @@ function setFrameCount(val) {
     return val;
 }
 
-},{}],115:[function(_dereq_,module,exports){
+},{}],118:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4055,7 +4669,7 @@ function getMousePosition(canvas) {
 }
 module.exports = exports['default'];
 
-},{}],116:[function(_dereq_,module,exports){
+},{}],119:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -4152,7 +4766,7 @@ function iterateObject(obj) {
 }
 module.exports = exports["default"];
 
-},{"babel-runtime/core-js/get-iterator":2,"babel-runtime/core-js/object/keys":5,"babel-runtime/regenerator":11}],117:[function(_dereq_,module,exports){
+},{"babel-runtime/core-js/get-iterator":2,"babel-runtime/core-js/object/keys":5,"babel-runtime/regenerator":11}],120:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4339,7 +4953,7 @@ function _injectVideoElement() {
     return video;
 }
 
-},{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}]},{},[105])(105)
+},{"babel-runtime/core-js/promise":6,"babel-runtime/helpers/asyncToGenerator":7,"babel-runtime/helpers/extends":8,"babel-runtime/regenerator":11}]},{},[106])(106)
 });
 
 //# sourceMappingURL=hackgl.js.map

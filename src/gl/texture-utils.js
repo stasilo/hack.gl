@@ -64,8 +64,17 @@ export function initTexture(gl, data, image) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeatTypeS);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatTypeT);
 
+    let internalFormat = gl.RGBA; //data.internalFormat || gl.RGBA;
+    let srcFormat = gl.RGBA; //data.srcFormat || gl.RGBA;
+    let border = 0;
+
     // set the texture image
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    if(typeof data.size !== 'undefined') {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.UNSIGNED_BYTE, image);
+        // gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.FLOAT, data.value);
+    } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, image);
+    }
 
     if(data.generateMips) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
@@ -121,7 +130,17 @@ export function rebindFboTextures(gl, uniforms) {
 export function updateTexture(gl, data) {
     gl.activeTexture(gl[`TEXTURE${data.textureUnitNo}`]);
     gl.bindTexture(gl.TEXTURE_2D, data.texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, data.value);
+
+    let internalFormat = gl.RGBA; //data.internalFormat || gl.RGBA;
+    let srcFormat = gl.RGBA; //data.srcFormat || gl.RGBA;
+
+    if(typeof data.size !== 'undefined') {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, data.size[0], data.size[1], 0, srcFormat, gl.UNSIGNED_BYTE, data.value);
+    } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, data.value);
+    }
+
+    // gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, srcFormat, gl.UNSIGNED_BYTE, data.value);
 }
 
 function _imageDimensionArePowerOf2(image) {

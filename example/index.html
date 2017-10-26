@@ -53,12 +53,10 @@
                     }
                 `
             }, {
-                uniforms: {
-                    u_texture2: {
-                        type: 't',
-                        value: null,
-                        url: 'assets/slime.png'
-                    }
+                audioAnalyser: {
+                    url: 'assets/test.mp3',
+                    fftSize: 1024,
+                    smoothing: 0.3
                 },
                 fragmentShader: `
                     uniform sampler2D u_texture2;
@@ -68,7 +66,10 @@
                         vec2 tc = uv;
 
                         //uv *= 0.997;
-                        uv += sin(u_time*2.0)*0.002;
+                        //uv += sin(u_time*(2.0+freq*2.0))*0.002;
+
+                        float freq = hackgl_getLogAudioFreqData(uv.x, 0.4, 0.8);
+                        uv += sin((2.0+freq*2.0))*0.005;
 
                         vec4 src = texture2D(u_fbo1, uv); // feedback
                         vec4 sum = texture2D(u_fbo0, tc);
@@ -81,7 +82,8 @@
             fragmentShader: `
                 void main() {
                     vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-                    gl_FragColor = texture2D(u_fbo1, uv); // => to screen
+                    vec3 color = texture2D(u_fbo1, uv).rgb;
+                    gl_FragColor = vec4(color, 1.0); // => to screen
                 }
             `,
         });
