@@ -21,7 +21,7 @@
             audioAnalyser: {
                 url: 'assets/test.mp3',
                 fftSize: 1024,
-                smoothing: 0.3
+                smoothing: 0.6
             },
             fragmentShader: `
                 void main()
@@ -31,14 +31,17 @@
 
                     if (uv.y > 0.5){
                         color = hackgl_getAudioFreqData(uv.x);
+                        //boost contrast
+                        color = pow(color, 2.0);
+                        //boost gain / brightness
+                        color *= 4.5;
                     } else {
                         color = hackgl_getLogAudioFreqData(uv.x, 0.3, 0.7);
+                        //boost contrast
+                        color = pow(color, 3.5);
+                        //boost gain / brightness
+                        color *= 3.0;
                     }
-
-                    //boost contrast
-                    color = pow(color, 3.0);
-                    //boost gain / brightness
-                    color *= 2.5;
 
                     color = clamp(color, 0.0, 1.0);
                     gl_FragColor = vec4(vec3(color), 1.0);

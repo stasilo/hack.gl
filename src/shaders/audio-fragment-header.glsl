@@ -1,6 +1,8 @@
+// this code was adapted from https://www.shadertoy.com/view/ltlyRM by @felixturner
+
 uniform sampler2D u_audio_data;
 
-// https://stackoverflow.com/questions/35799286
+// https://stackoverflow.com/questions/35799286/get-logarithmic-bytefrequencydata-from-audio
 float _hackgl_toLog(float value, float min, float max){
     float exp = (value-min) / (max-min);
     return min * pow(max/min, exp);
@@ -17,7 +19,7 @@ float _hackgl_toLog(float value, float min, float max){
  */
 
 float _hackgl_getFreqData(float index) {
-    return texture2D(u_audio_data, vec2(index, 0.5)).r;
+    return texture2D(u_audio_data, vec2(index, 0.0)).r;
 }
 
 float hackgl_getAudioFreqData(float index, float minCrop, float maxCrop) {

@@ -4465,7 +4465,7 @@ exports.default = new function () {
 module.exports = exports['default'];
 
 },{}],109:[function(_dereq_,module,exports){
-module.exports = "uniform sampler2D u_audio_data;\n\n// https://stackoverflow.com/questions/35799286\nfloat _hackgl_toLog(float value, float min, float max){\n    float exp = (value-min) / (max-min);\n    return min * pow(max/min, exp);\n}\n\n/*\n * Freq data is stored as unsigned integers/rgba. Since webGl 1 doesn't have texelFetch we have to\n * access the data with uv coordinates using texture2D.\n *\n * Example:\n * Assume an fft size of 512, which means a bin count of 256 freq data values.\n * To access freq data at, for example, index 128 in the original array returned from the web audio api, do:\n * _hackgl_getFreqData(128.0/256.0);\n */\n\nfloat _hackgl_getFreqData(float index) {\n    return texture2D(u_audio_data, vec2(index, 0.5)).r;\n}\n\nfloat hackgl_getAudioFreqData(float index, float minCrop, float maxCrop) {\n    // crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xCoord);\n    return fft;\n}\n\nfloat hackgl_getAudioFreqData(float index) {\n    return hackgl_getAudioFreqData(index, 0.3, 0.7);\n}\n\nfloat hackgl_getLogAudioFreqData(float index, float minCrop, float maxCrop) {\n    //crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n    //logarithmic sampling\n    float xPos = _hackgl_toLog(xCoord, 0.01, 1.0);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xPos);\n    return fft;\n}\n\nfloat hackgl_getLogAudioFreqData(float index) {\n    return hackgl_getLogAudioFreqData(index, 0.3, 0.7);\n}\n";
+module.exports = "// this code was adapted from https://www.shadertoy.com/view/ltlyRM by @felixturner\n\nuniform sampler2D u_audio_data;\n\n// https://stackoverflow.com/questions/35799286/get-logarithmic-bytefrequencydata-from-audio\nfloat _hackgl_toLog(float value, float min, float max){\n    float exp = (value-min) / (max-min);\n    return min * pow(max/min, exp);\n}\n\n/*\n * Freq data is stored as unsigned integers/rgba. Since webGl 1 doesn't have texelFetch we have to\n * access the data with uv coordinates using texture2D.\n *\n * Example:\n * Assume an fft size of 512, which means a bin count of 256 freq data values.\n * To access freq data at, for example, index 128 in the original array returned from the web audio api, do:\n * _hackgl_getFreqData(128.0/256.0);\n */\n\nfloat _hackgl_getFreqData(float index) {\n    return texture2D(u_audio_data, vec2(index, 0.0)).r;\n}\n\nfloat hackgl_getAudioFreqData(float index, float minCrop, float maxCrop) {\n    // crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xCoord);\n    return fft;\n}\n\nfloat hackgl_getAudioFreqData(float index) {\n    return hackgl_getAudioFreqData(index, 0.3, 0.7);\n}\n\nfloat hackgl_getLogAudioFreqData(float index, float minCrop, float maxCrop) {\n    //crop bottom and top of range\n    float xCoord = mix(minCrop, maxCrop, index);\n    //logarithmic sampling\n    float xPos = _hackgl_toLog(xCoord, 0.01, 1.0);\n\n    // get freq for current index\n    float fft = _hackgl_getFreqData(xPos);\n    return fft;\n}\n\nfloat hackgl_getLogAudioFreqData(float index) {\n    return hackgl_getLogAudioFreqData(index, 0.3, 0.7);\n}\n";
 
 },{}],110:[function(_dereq_,module,exports){
 module.exports = "uniform sampler2D u_camera;\n";
@@ -4504,7 +4504,8 @@ var _asyncToGenerator3 = _interopRequireDefault(_asyncToGenerator2);
 
 var initAudioAnalyserUniform = exports.initAudioAnalyserUniform = function () {
     var _ref = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee(gl, options) {
-        var analyserOptions;
+        var analyserOptions, source, _getAudioSource;
+
         return _regenerator2.default.wrap(function _callee$(_context) {
             while (1) {
                 switch (_context.prev = _context.next) {
@@ -4518,46 +4519,119 @@ var initAudioAnalyserUniform = exports.initAudioAnalyserUniform = function () {
 
                     case 2:
                         analyserOptions = options.audioAnalyser;
+                        source = null;
 
 
                         analyser = context.createAnalyser();
                         analyser.fftSize = analyserOptions.fftSize || 1024; // 1024 / 2 = 512 data points per sample of sound
                         analyser.smoothingTimeConstant = analyserOptions.smoothing || 0.5; //0.2;
 
-                        return _context.abrupt('return', fetch(analyserOptions.url).then(function (response) {
+                        _getAudioSource = typeof analyserOptions.url === 'undefined' ? _getMicrophoneSource : _getAudioFileSource;
+                        _context.prev = 8;
+                        _context.next = 11;
+                        return _getAudioSource(analyserOptions);
+
+                    case 11:
+                        source = _context.sent;
+                        _context.next = 18;
+                        break;
+
+                    case 14:
+                        _context.prev = 14;
+                        _context.t0 = _context['catch'](8);
+
+                        console.dir(_context.t0);
+                        throw 'hackGl: Could not load audio file or mic stream';
+
+                    case 18:
+
+                        source.connect(analyser);
+                        analyser.connect(context.destination);
+                        if (typeof analyserOptions.url !== 'undefined') {
+                            source.start();
+                            source.loop = true;
+                        }
+
+                        audioUniform = (0, _extends3.default)({}, audioUniformBase, {
+                            value: getFrequencyData(),
+                            update: function update() {
+                                return getFrequencyData();
+                            },
+                            size: [analyser.frequencyBinCount, 1]
+                        });
+
+                        return _context.abrupt('return', audioUniform);
+
+                    case 23:
+                    case 'end':
+                        return _context.stop();
+                }
+            }
+        }, _callee, this, [[8, 14]]);
+    }));
+
+    return function initAudioAnalyserUniform(_x, _x2) {
+        return _ref.apply(this, arguments);
+    };
+}();
+
+var _getAudioFileSource = function () {
+    var _ref2 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee2(analyserOptions) {
+        return _regenerator2.default.wrap(function _callee2$(_context2) {
+            while (1) {
+                switch (_context2.prev = _context2.next) {
+                    case 0:
+                        return _context2.abrupt('return', fetch(analyserOptions.url).then(function (response) {
                             return response.arrayBuffer();
                         }).then(function (arrayBuffer) {
                             return context.decodeAudioData(arrayBuffer);
                         }).then(function (audioBuffer) {
                             var source = context.createBufferSource();
-
                             source.buffer = audioBuffer;
-                            source.connect(analyser);
-                            analyser.connect(context.destination);
-                            source.start();
-                            source.loop = true;
 
-                            audioUniform = (0, _extends3.default)({}, audioUniformBase, {
-                                value: getFrequencyData(),
-                                size: [analyser.frequencyBinCount, 1]
-                            });
-
-                            return audioUniform;
-                        }).catch(function (error) {
-                            console.warn('hack.gl: failed to fetch audio data: ');
-                            console.dir(error);
+                            return source;
                         }));
 
-                    case 7:
+                    case 1:
                     case 'end':
-                        return _context.stop();
+                        return _context2.stop();
                 }
             }
-        }, _callee, this);
+        }, _callee2, this);
     }));
 
-    return function initAudioAnalyserUniform(_x, _x2) {
-        return _ref.apply(this, arguments);
+    return function _getAudioFileSource(_x3) {
+        return _ref2.apply(this, arguments);
+    };
+}();
+
+var _getMicrophoneSource = function () {
+    var _ref3 = (0, _asyncToGenerator3.default)( /*#__PURE__*/_regenerator2.default.mark(function _callee3() {
+        var stream;
+        return _regenerator2.default.wrap(function _callee3$(_context3) {
+            while (1) {
+                switch (_context3.prev = _context3.next) {
+                    case 0:
+                        _context3.next = 2;
+                        return navigator.mediaDevices.getUserMedia({
+                            audio: true,
+                            video: false
+                        });
+
+                    case 2:
+                        stream = _context3.sent;
+                        return _context3.abrupt('return', context.createMediaStreamSource(stream));
+
+                    case 4:
+                    case 'end':
+                        return _context3.stop();
+                }
+            }
+        }, _callee3, this);
+    }));
+
+    return function _getMicrophoneSource() {
+        return _ref3.apply(this, arguments);
     };
 }();
 
@@ -4572,9 +4646,6 @@ var analyser = null,
 var audioUniformBase = {
     type: 't',
     needsUpdate: true,
-    update: function update() {
-        return getFrequencyData();
-    },
     wrapS: 'clamp',
     wrapT: 'clamp'
 };

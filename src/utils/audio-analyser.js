@@ -4,7 +4,6 @@ var analyser = null, source = null;
 let audioUniformBase = {
     type: 't',
     needsUpdate: true,
-    update: () => getFrequencyData(),
     wrapS: 'clamp',
     wrapT: 'clamp'
 }
@@ -17,34 +16,38 @@ export async function initAudioAnalyserUniform(gl, options) {
     }
 
     const analyserOptions = options.audioAnalyser;
+    let source = null;
 
     analyser = context.createAnalyser();
     analyser.fftSize = analyserOptions.fftSize || 1024; // 1024 / 2 = 512 data points per sample of sound
     analyser.smoothingTimeConstant = analyserOptions.smoothing || 0.5; //0.2;
 
-    return fetch(analyserOptions.url)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-            let source = context.createBufferSource();
+    const _getAudioSource = typeof analyserOptions.url === 'undefined' ?
+        _getMicrophoneSource :
+        _getAudioFileSource;
 
-            source.buffer = audioBuffer;
-            source.connect(analyser);
-            analyser.connect(context.destination);
-            source.start();
-            source.loop = true;
+    try {
+        source = await _getAudioSource(analyserOptions);
+    } catch(error) {
+        console.dir(error);
+        throw 'hackGl: Could not load audio file or mic stream';
+    }
 
-            audioUniform = {
-                ...audioUniformBase,
-                value: getFrequencyData(),
-                size: [analyser.frequencyBinCount, 1],
-            };
+    source.connect(analyser);
+    analyser.connect(context.destination);
+    if(typeof analyserOptions.url !== 'undefined') {
+        source.start();
+        source.loop = true;
+    }
 
-            return audioUniform;
-        }).catch(error => {
-            console.warn(`hack.gl: failed to fetch audio data: `);
-            console.dir(error);
-        });
+    audioUniform = {
+        ...audioUniformBase,
+        value: getFrequencyData(),
+        update: () => getFrequencyData(),
+        size: [analyser.frequencyBinCount, 1],
+    };
+
+    return audioUniform;
 }
 
 export function getFrequencyData() {
@@ -61,4 +64,25 @@ export function getFrequencyData() {
     });
 
     return shaderData;
+}
+
+async function _getAudioFileSource(analyserOptions) {
+    return fetch(analyserOptions.url)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+            let source = context.createBufferSource();
+            source.buffer = audioBuffer;
+
+            return source;
+        })
+}
+
+async function _getMicrophoneSource() {
+    let stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false
+    });
+
+    return context.createMediaStreamSource(stream);
 }
